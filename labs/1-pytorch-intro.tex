@@ -1,0 +1,29 @@
+\section{PyTorch Introduction}
+\section{NumPy}
+\texttt{ndim} gives the number of dimensions of the object. \\
+\texttt{shape} gives the number of element per dimension: rows, cols, depth and so on. \\
+\texttt{reshape(<dimension>)} reorganizes data according to the specified \texttt{<dimension>}. \\
+\texttt{dtype} exposes a series of attributes like byteorder, itemsize, name and type. \\
+
+Initialization can be done with \texttt{zeros}, \texttt{ones}, \texttt{empty}, \texttt{eye}, and \texttt{diag}.
+
+Remember that the slice operator takes a stride as third argument.
+
+Axis reduction can be done with either sum or mean. The API is the same.
+\texttt{axis=None} means considering all elements. \texttt{axis=0} sums values on columns. \texttt{axis=1} sums values on rows.
+
+Broadcasting is a feature that allows objects of different (but compatible) sizes to be used as operands for some operator like sum
+or multiplication. The missing values are broadcasted to reach the size of the biggest tensor.
+
+\section{PyTorch}
+\texttt{torch.rand} to generate a random tensor. \\
+\texttt{tensor.view} to interpret it with a given size. \\
+\texttt{tensor.resize} is different from view, it may or may not reorganize memory layout. \\
+
+\texttt{torch.Tensor} is the central class of the package. Setting \texttt{.requires_grad} as True, PyTorch starts to keeping track of
+all operations on the tensor. Computational graph is the data structure used to keep track of operations.
+We will use it to compute the gradient of the loss function. When we finish computation we can call \texttt{.backward()} to get the
+gradient.
+The gradient for this tensor will be accumulated into the \texttt{.grad} attribute.
+To stop a tensor from tracking operations, we can call \texttt{.detach()}; alternatively we can run code inside \texttt{torch.no_grad()}
+context.
