@@ -1,0 +1,11 @@
+\section{PyTorch Logistic Regression}
+\subsection{Torch Optimizers}
+Blast everything seen so far. We can optimize parameters with the \texttt{torch.optim} package.
+We can choose between different optimizers: most common are SGD and ADAM. Example:
+\begin{verbatim}
+optimizer = torch.optim.SGD([w], learning_rate)
+[...]
+loss.backward()
+optimizer.step()
+optimizer.zero_grad()
+\end{verbatim}
