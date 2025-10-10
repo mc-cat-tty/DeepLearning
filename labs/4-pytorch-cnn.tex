@@ -1,0 +1,9 @@
+\section{Convolutional Neural Networks}
+\subsection{VGG-16}
+The number at the end of the network's name usually indicates the number of layers.
+
+We will use \texttt{torch.Conv2D} and \texttt{torch.Linear} objects. Inside the \texttt{__init__} method of a \texttt{nn.Module} we define all learnable objects.
+Everything else can be put inside, for instance, the forward function.
+
+We define a custom layer to avoid code repetition (convolution - activation - pooling) in the NN. Sequential block to sequentialize the custom layers.
+
