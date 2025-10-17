@@ -2,5 +2,6 @@
 *.aux
 *.zip
 *.csv
+*.pkl
 venv/
 data/

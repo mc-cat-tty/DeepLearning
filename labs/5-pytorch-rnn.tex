@@ -1,0 +1,13 @@
+\section{Recurrent Neural Networks}
+\subsection{Weather Forecasting LSTM}
+We are dealing with a many to one problem, meaning, many input timesteps and just one output timestep.
+
+Sin-cos transformations to smooth out sawtooth wave. Trigonometric functions keep values at the end of
+the sequence near to values at the start of it. E.g., last day of month becomes numerically near to 
+the start of the month.
+
+In RNNs we have an internal state $C_t$, used by the network for internal purposes.
+While $H_t$ is the hidden state, but can be used for external usage.
+
+NNs can usually be dividied into a backbone, for feature extraction, and a head, for clasification or regression.
+In this exercise we will concatenate LSTM, ReLU and a linear layer.
