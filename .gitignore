@@ -3,5 +3,7 @@
 *.zip
 *.csv
 *.pkl
+*.pdf
+*.toc
 venv/
 data/

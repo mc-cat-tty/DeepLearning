@@ -1,5 +1,18 @@
-\documentclass{article}
+\documentclass{report}
+
+\setcounter{secnumdepth}{-1}
 
 \begin{document}
-\include{theory/1-introduction.tex}
+\tableofcontents
+
+\chapter{Theory}
+\input{theory/1-introduction.tex}
+% \input{theory/2-refresher.tex}
+
+\chapter{Labs}
+\input{labs/1-pytorch-intro.tex}
+\input{labs/2-pytorch-logreg.tex}
+% \input{labs/3-pytorch-mlp.tex}
+\input{labs/4-pytorch-cnn.tex}
+\input{labs/5-pytorch-rnn.tex}
 \end{document}
