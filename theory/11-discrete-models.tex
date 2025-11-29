@@ -1,0 +1,197 @@
+\section{Discrete Models}
+
+Discretization is the process of dividing a continous value into dinstinct (discrete) parts.
+
+Problem: to train networks we use gradient descent, however, in the descrete world it doesn't work, since it requires a continous
+function.
+
+Discrete examples: words are vocabulary entries and can be substituded with their index in the vocabulary, university gradients, or
+cartesian plane ticks.
+
+Images are an example of 2D discrete data. See: FFT
+
+Quantization is not differentiable: $r' = quantize(r), r \in \mathbb{R}$.
+
+Torch Example. The following setup is often used in information retrieval.
+\begin{verbatim}
+query   [1, dim]
+keys    [num_keys, dim]
+values  [num_keys, 1]
+scores = keys @ query.T
+selected_index = argmax(scores)
+selected_value = values[selected_index]
+\end{verbatim}
+
+Discrete choices are not differentiable: here, argmax is the problem.
+
+Solutions: VQ-VAE (Vector Quantized Variational Autoencoders), pixel-RNN, etc.
+
+A huge problem of VAEs is posterior collapse, aka the posterior distribution collapses on the prior distribution. Basically it becomes
+alike the normal distribution for each input image.
+
+how we can solve it? prior with different modes; another solution could be introudcing a hyper-paramter $\beta$ to weigh the KL
+divergence within the ELBO, to lower its contribution.
+
+VQ-VAE uses discrete latent variables. The output of the encoder is a map of discrete symbols in a predefined range. The decoder takes
+the latent grid and maps it to original data.
+
+How is it implemented? it adds a codebook (or lookup table) to the latent layer.
+\begin{verbatim}
+Encoder -> Nearest neighbors -> Decoder
+                  ^
+                  |
+              Codebook
+\end{verbatim}
+
+The Codebook is a learnable matrix with N rows. During forward pass, we take the activation vector of each pixel and take the codebook row with
+minimum Euclidean distance wrt the chosen activation vector.
+Once we find the nearest row, we pick its index and put it in the output map.
+Each index goes from 0 to N-1. N is a hyperparameter.
+The number of features of each pixel and the cols of each row of the codebook have the same size.
+
+Given $e_i$ general row of the codebook.
+$Z_e$ the activaiton vector of the pixel.
+$$
+q(z=k | x) =
+\begin{array}
+  1 if k = argmin_j || Z_e(x) - e_j ||_2 \\
+  0 otherwise
+\end{array}
+$$
+
+The codebook learns the most frequent and peculiar features given as output from the encoder.
+During the inference, the decoder correlates each output pixel with the associated vector in the codebook.
+
+\subsection{Straight-Through Gradient Estimation}
+The Straight-Through Estimator (STE) is a strategy taht uses two differents formulas: one for forward pass and another one fo backward
+pass:
+ - forward pass: $z_q = quantize(z_e)$
+ - backward pass: $\grad{L}{z_e} \approx \grad{L}{z_q}$
+
+This means that the quantization is ignored during the backward pass. The quantization is substituted by the identity matrix.
+
+This trick is commonly used in:
+ - binary neural gates: forward as step and backward as sigmoid
+ - neural architecture search, routing and pruning
+
+Torch Example.
+$$
+\dots
+Z_q = e_k
+Z_q^{STE} = Z_e + detach(Z_q - Z_e)
+\dots
+$$
+
+In forward detach is ignored, $Z_q^{STE}$ equal to the quantized version since $Z_e$ cancels out.
+
+What about the loss function?
+$L = log p(x | z_q(x)) + || detach(z_e(x)) - z_q(x) ||_2^2 + \beta || z_e(x) - detach(z_q(x)) ||_2^2$
+The first term is the reconstruction error.
+Second is vector quantization error. Affects just the codebook; the encoder, visibile in term $z_e$, does not affects the optimization
+of this term since we are not computing the gradient over it. This term enforces good compression schema, aka good quantization error.
+Last is commitment error: asks the vice versa of second term, aka we ask the encoder to produce codes that are easily interpretable.
+
+Note that: this time we do not have the KL divergence anymore. No more distributions. The latent space is described by the codebook.
+Also, in this architecture we don't specify the prior, we are learning it.
+
+\subsection{Applications}
+VQ-VAEs are used as preprocessing step in many multimodel applications.
+We can use this scheme for instance, to image compression, but also works for time series.
+
+It is well suitable for compression algorithms, since discrete values in the output matrix/codebook are redundant, so easily compressable.
+
+This is called neural compression: a technique that combines neural networks with human crafted algorithm (like Huffman).
+
+See: slide 30 for applications in literature
+
+\subsection{Generation}
+Generation is performed sampling random rows from the codebook, combining them in a tensor, and passing it through the decoder.
+
+This sampling does not produce good results if not done in the proper order.
+
+We introduce another model that learns in which order sample data from the codebook: \textbf{learnable prior}.
+This is needed if we apply the VQ-VAE to image generation; for image compression is enough what we have done so far. \\
+Idea: train a model that samples from the codebook and returns a grid. The training set is the \{codebook, encoder output grid\}. \\
+
+Training is performed in two passes.
+
+\subsection{Pixel-CNN}
+It is an autoregressive model: in order to sample a pixel we will use the previously generated pixels.
+
+The input is a sequence of discrete symbols that span a domain of k codes.
+E.g., pixels grayscale values.
+
+What is autoregression?
+Given $z_t$ latent code predicted by the model.
+The probability of generation of a sequence of codes is:
+$$
+p(z_1, z_2, \dots, z_T)
+= p(z_T | z_1, z_2, \dots, z_T-1) * p(z_1, z_2, \dots, z_T-1)
+= p(z_T | z_1, z_2, \dots, z_T-1) * p(z_T | z_1, z_2, \dots, z_T-2) * p(z_1, z_2, \dots, z_T-2)
+= \dots
+= \prod_{t=1}^T p(z_t | z_{<t})
+$$
+
+From Bayes rule P(A, B) = P(A|B) * P(B).
+
+The joint distrubution can be written as product of conditionals. Intuitively: the probability of the next element depends just on the
+value of previous ones.
+
+Each conditional can be modeled as a categorical distribution: given previous probability values (eg. an histogram), predict the next one.
+$p_{\theta_z} (z_t | z_{>t}) = Cat(TODO)$
+
+PixelCNN Idea: predict over discrete latent variables using a 2D autoregressive model. TODO
+
+Inference: sequential sampling from an empty image (or latent grid). For each pixel in the image grid sample $z_{i, h}$ from the predicted
+categorical distribuiton.
+
+The forward pass is: $p_{\theta_z} (z_t | z_{>t}) = Cat(z_{i, j}; \pi_{\theta_z}(z_{<t}))$ where $\pi_{\theta_z}(z_{<t}) = PixelCNN(z_{<i, j}; \theta_z)$.
+
+In order to avoid the network learns pixel values from future ones (information leakage) we use masking.
+Masking consists in zeroing values of future pixels.
+
+We have two types of masking strategies:
+ - mask type A: excludes current (central) pixel, used in first layer only, when central pixel is zero. Excluding it, we avoid a prior towards zero.
+ - mask type B: includes durrent pixel, used in second layer when the current pixel has a value.
+
+Training. We use a cross entropy loss between the predicted distribution and the ground truth.
+
+Problem: sampling from PixelCNN requires a forward pass, at worst HxV, due to autoregressive dependency.
+To perform one backward pass, we would need several forward passes (up to the current pixel).
+
+Solution: teacher forcing, in which ground truth pixel values are available in the learning process instead of the ones generated by the PixelCNN.
+Clearly, current value is masked with a zero to avoid the network from learning the ground truth values as is.
+
+With PixelCNN we can learn the distribution of codes in the grid of the latent space.
+Then, we can use the network to select autoregressively each code for each position in the grid of the latent space.
+Then, we can feed the grid to the decoder.
+
+Pseudocode.
+Training.
+logits = PixelCNN(image)
+loss = 0
+for each pixel (i, j) in image do
+  loss += CE(logits[i, j], image[i, j])
+Backpropagate and update
+
+Sampling (autoregressive).
+TODO
+
+PixelCNN can be used for anomaly detection. It provides the probability an image belonging to a dataset.
+Anomalous images have a low likelihood under a given model.
+Note that you can estimate the likelihood of a data generated by the network.
+
+\section{Gumbel Softmax}
+Alternative to Straight Throguh Estimator used in VQ-VAE.
+
+Uses Gumbel distribution: trick to make differentiable something that is not, by slightly perturbing it.
+
+TODO formula.
+
+Gumbel softmax stages:
+ - one hot encoding: y_k = one-hot(arg max_j \pi_j). Pi contains the set of probabilities.
+ - compute the gumbel softmax (standard softmax is differentiable but not samplable): TODO formula. $\labmda$ is a parameter that tunes the temperature of the softmax. If equal to zero, it is almost equal to one hot encoding.
+
+Lambda just changes the form of the distribution shape. With equal lambdas, no one guarantees that the values are always the same, since 
+we are sampling from a distribution, which is a non deterministic operation.
+

@@ -1,0 +1,13 @@
+\section{Transformers}
+\subsection{Weather Forecasting Encoder}
+Tip: start with MHA implementation \\
+Remember that a feed-forward network is just a MLP.
+MLPs perform input expansion inside the hidden layers; expansion is usually tuned with the expansion factor.
+
+Why make attention multi-headed? having multiple heads allows each attention block to specialize on a different thing.
+Concatenating them allows to ensable features at a progressively higher abstraction layer.
+
+Usually we put a linear projection in front of a transformer to make input features match the size of transformer's hidden layer.
+
+A transformer returns an output of the same size as the input. \\
+How to obtain just one value? average pooling at the end or CLS token.

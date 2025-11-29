@@ -1,0 +1,21 @@
+\section{Denoising Autoencoder}
+We will work on the MNIST dataset.
+Given an input image x and the AE output \cap x, we want \cap x as similar as possible to x.
+
+The goal of AE is to train encoder and decoder to deal with a code (latent space), the model has to learn by itself.
+
+Denoising AE is a kind of regularized AE. Adding noise and teaching how to remove it to the model is a kind of regularization. \\
+The model instrinsically learn to separate good signal from noise.
+
+The noise we will generate is sampled from a zero-centered distribution $\normal (0, T \alpha)$.
+
+The training set is the set of images in which a certain number is drawn. E.g., we can choose the threes as training set.
+Abnormal inputs are represented by the other numbers.
+
+Ideas:
+ - semi-supervised learning: attach a binary classifier to the hidden layer and use it to classify normal and abnormal data.
+ - feed the value to the AE, get the output and perform the difference (euclidean norm) between the input and the output.
+ This method relies on the reconstruction error to distinguish between normal and abnormal data through thresholding.
+
+How to measure the performance of the model? the ROC AUC fits well since it doesn't require a threshold; instead, the accuracy is not
+good to evaluate this task since anomaly detection tasks often present imbalanced datasets.

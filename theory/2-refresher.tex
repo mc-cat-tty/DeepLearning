@@ -1,0 +1,120 @@
+\section{Refresher}
+\subsection{Logistic Regression with Gradient Descent}
+We are in the supervised learning case.
+The classification is binary, meaning that the Y class will be just one or zero.
+Given a training set of N training examples made up of m features and a label each:
+$\{(X_i, Y_i)\}_{i=1}^N$ where $X_i \in \mathbb{R}^m$ and $Y_i \in \{0, 1\}$ for each $i = 1:N$.
+
+Logistic regression is a probabilistic disciminative classifier.
+In binary case models the probability as posterior probability:
+$$
+P(Y = 0 | x) = \frac{e^{w^T x + b}}{1 + e^{w^T x + b}} \\
+P(Y = 1 | x) = \frac{1}{1 + e^{w^T x + b}}
+$$
+
+Tip: logistic regression probability formulas can be obtained modeling log-odds equal to the value of $w^T x + b$.
+
+The probability of a point being one and its probability being zero must sum to one,
+since the probability of all possible outcomes of an event must sum to one.
+
+The classifier is proven linear by computing the decision boundary | $P(0|x) = P(1|x)$ |,
+passing to the logarithm (doesn't change the equation) | $\log P(0|x) = \log P(1|x)$ |,
+then passing to the subtraction equal to zero gives us $\log P(0|x) - \log P(1|x) = w^T x + b = 0$.
+The geometric locus that satisfies it is the hyperplane.
+We demonstrated that the decision boundary is linear.
+
+Logreg can be extended to be multiclass.
+
+Inference is easy, just maximum between the probability of being zero and prob of being one, determines the inferred class.
+In the multiclass case, the class that returns the highest probability is selected:
+$f_{LR}(x) = argmax_{c \in Y} P(Y=c | x)$.
+
+Training aims at finding the best vector $w$ of weights and bias $b$, grouped together under $\theta$.
+The parameters are selected to optimize conditional log likelihood over the dataset $D = \{(x_i, y_i), i=1:N\}$:
+$$ \theta_* = arg max_\theta L(\theta | D) = arg max_\theta -\frac{1}{N} \sum_{i=1}^N \log P(Y=y_i | X=x_i)$$.
+No closed formula exists to solve it.
+
+Slide 8. Beware the probabilities are swapped.
+In the case of two classes, the conditional log likelihood becomes:
+$$L(\theta|D) = \frac{1}{N} \sum_{i=1}^N y_i \log P(y=1|x) + (1-y_i) \log P(y=0|x)$$. $y_i$ and $(1-y_i)$ coefficients are just a trick to select
+they right log probability knowing which one was the right class.
+For simplicity, we omit the bias $b$ from the formula; from now on, only $w$ component is considered as part of $\theta$.
+Note that the bias can be reintroduced implicitly by passing to a homogenous transformation $w^T x_i$.   
+The formula can be further developed:
+$$
+L(w|D)
+= \frac{1}{N} \sum_{i=1}^N y_i w^T x_i - y_i \log (1 + e^{w^T x_i}) + (1-y_i) 0 - (1-y_i) \log (1 + e^{w^T x_i})
+= \frac{1}{N} \sum_{i=1}^N y_i w^T x_i - y_i \log (1 + e^{w^T x_i}) - \log (1 + e^{w^T x_i}) + y_i \log (1 + e^{w^T x_i})
+= \frac{1}{N} \sum_{i=1}^N y_i w^T x_i - \log (1 + e^{w^T x_i})
+$$ \label{eq:unrolled_likelihood}
+
+The likelihood is also called negative cross entropy.
+
+We can define function $F(x_i, w) = \sigma(w^T x_i)$, where $\sigma(x) = \frac{1}{1 + e^-x} = \frac{e^x}{1 + e^x}$ is
+the logistic function. The logistic function is a sigmoid, i.e. a S-shaped function.
+The sigmoid is the smooth verison of a step function. Every formula above can be rewritten as a function of $F$.
+
+Now, we can say that the training has the objective to maximize the likelihood over the dataset D, or,
+analogously, to minimize the cross entropy loss ($-L$).
+
+Since we do not have a closed form solution for the optimizaition problem, we use an iterative strategy, a.k.a. gradient descent.
+The start point is picked randomly.
+The gradient descent update is expressed as: $\theta_j = \theta_j - \alpha \frac{\delta f(\theta)}{\delta \theta_j}$
+New candidate is the old minus the derivative (gradient in multivariate case) of the function in the old point.
+
+We stop when the gradient is roughly zero, which is an euristic approach, since no guarantees about the global minimum;
+only exception is convex functions, since they do guarantee that the local and global minimum coincide.
+
+Alpha is called leraning rate, which influences the speed of convergence.
+Big alphas can be problematic: they could create oscilations around the minimum.
+
+Given likelihood $L(w|D)$, we want to take the derivative (actually, the gradient) of $L$ wrt $w$.
+Slide 17 (or \ref{eq:unrolled_likelihood}) for the unrolled version, then we compute partial derivative wrt to each component of $w$:
+$L(w) = \frac{1}{N} \sum_{i=1}^N y_i w^T x_i - \log (1 + e^{w^T x_i})$
+
+$$
+\frac{\partial{L(w)}}{\partial{w_j}}
+= \frac{1}{N} \sum_{i=1}^N \left[ y_i x_i^{(j)} - \frac{e^{w^T x_i}}{1 + e^{w^T \cdot x_i}} x_i \right]
+= \frac{1}{N} \sum_{i=1}^N \left[ (y_i - \sigma(w^T \cdot x_i)) \right] x_i^{(j)}
+$$
+where $\sigma(z) = \frac{1}{1 + e^{-z}}$ is the sigmoid function.
+
+The fist addend is a constant ($y_i$) by the dot product between vectors $x_i$ and $w^{T}$.
+Each element of $x_i$ is constant and multiplied with the corresponding element of $w^{T}$.
+Since $w_j$ is the derivation variable, only the j-th element of $x_i$ will survive (since multiplied with the variable), while the others
+will become zeroes (since they are constant).
+Second addend uses the chain rule; it's the composition of log, a sum (constant plus exp) and $w^T \cdot x_i$ (same as before).
+The derivative of L(w) wrt w is a vector | the gradient |, in which the j-th element is the derivative of L(w) wrt to w_j.
+The update of each weight is done according to the j-th element of that vector.
+The cost function used in gradient descent is called objective or loss function, and it is denoted with $L(\cdot)$ or $J(\cdot)$.
+
+This is the vanilla rule: batch gradient descent. Is called batch since we should run through all training examples.
+Several optimizers are built on top of it to speed up convergence.
+
+A different strategy is minibatch stochastic gradient descent.
+The minibatch is a subset of the dataset chosen by randomly sampling the examples.
+This way, we can avoid computing the average of all elements.
+
+In the extreme case just one random example is sampled from the training set to perform the update. Called stochastic gradient descent.
+No average is needed.
+
+Full batch gradient descent is best one, minibatch is in the middle, the worst is the fully stochastic version.
+The same sorting holds for speed, from slowest to quickest.
+
+To avoid being stuck to local minimums and traveling zig-zags with SGD, we use strategies as ADAM -- Adaptive Moment Estimation.
+The momentum smooths out the path toward the minimum with a weighted moving average of past gradient.
+We combine also an adaptive learning rate to slower descent while approaching the minimum (magnitude of the gradient is used to estimate it).
+
+First moment. The moving of the average of the gradient is m_t = beta_1 m_(t-1) + (1 - beta1) gradient_t. Beta is the weight.
+Second moment. The variance is beta2 v_(t-1) + (1-beta2) gradient at t squared
+Bias correction for m: m_t = \frac{m_t}{1-beta_t}. Remember that the weighting coeff, beta, is below one, converging to zero when raised to infinity.
+The correction for v is the same with v instead of m.
+Bias corrections lower the value of the correction with few samples, increase it while the optimizaiton evolves.
+
+Intuitively: if the path towards the minimum is straight, we can speed up learning rate; if zig-zags (high path variance), slow it.
+
+Weight update is thus corrected as follows: next theta = current theta - alpha \frac{corrected m in t}{square of v corrected t plus epsilon}
+
+Pros: fast convergence, works well with minimal tuning, handles noisy gradients
+Cons: doesn't work well with some models, e.g. generative ones. Requires extra memory for momentum estimate.
+We add a memory proportional to the number of parameters (one momentum for each w_i).

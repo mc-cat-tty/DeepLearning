@@ -1,0 +1,88 @@
+\section{Recurrent Neural Networks}
+\subsection{Usage}
+In this lecture will analyze NNs for time-series, aka ordered sequence of observations.
+
+Def. A time series is a set of observations $\{x_t\}$ collected over time.
+
+We will consider discrete and regularly sampled time series.
+
+Most important features that can be extracted from a time series are:
+ - trend: is the ts averagely increasing or decreasing?
+ - seasonality: regular fluctationsfor each period of reference
+ - cycle: periodic fluctuation around the trend
+ - outliers: values out of distribution
+ - stationariety: a ts is stationary if mean and variance do not change over time
+
+STL - Seasonality and Trend - decomposition splits data into Seasonality and Trend using Lossless regression.
+
+After STL decomposition we can put together again the trend and seasonality from our model and subtract it from original ts to get the residual.
+
+\subsection{Forecasting}
+Given a tau period of observation we want to predict the future values of the process.
+
+Objective: Data generating process --> model --> real world evidence
+That matches as much as possible.
+Data generating process --> real world evidence
+
+It boils down to accurately estimate the hidden parameters of the data generation process.
+
+The foregasting models consider a limited window of observations in the form: TODO formula.
+Epsilon is white noise that can be sampled from a given distribution.
+
+\subsection{Approaches}
+Def. An autoregressive model of order p, denoted as AR(p), has an output that depends from p past samples.
+TODO formula
+
+Def. A moving average model of order q, denoted as MA(q), is defined as: noise plus average plus previous variations
+TODO formula
+
+\subsection{Basics}
+TS usually work in the time domain.
+Sometimes is useful to perform "data preparation" techinques: extract or separate time information, format and refine values.
+Other pre-processing techniques are Fourier (to pass to the frequency domain) and wavelet transforms.
+
+How to deal with different data types? strings must be converted to numerical values, periodic values should be preserved.
+Since NNs work better wehn they have inputs with zero average and costant variance, but periodic values such as months and days 
+span a different range of values (0-12, 0-31), it is preferable to pass them through sine or cosine functions to map them to unit values.
+Periodicity must be chosen depending on the tau.
+
+\subsection{RNNs}
+RNNs are a framework. They define a family of models that are not feedforward, meaning that their topology has some feedback outputs.
+The outputs are fed back into the model itself.
+
+RNNs are composed of multiple recurrent cells.
+
+Vanilla RNN. TODO diagram. U maps inputs to the hidden state, W parametrizes hidden (or latent) state transition, V maps hidden state to output.
+Basically is compose of a linear model (MLP) that goes from input to h, from h to output, and from h_{t-1} to h_{t}.
+U, W and V are three set of learnable parameters.
+
+TODO dynamic model.
+
+The hidden state keeps memory of what happened in the past. TODO unrolled diagram.
+
+h(t) = f(h(t-1), x(t), theta)
+
+\subsection{Learning}
+Problem: hidden layer weights are shared between time points. We use backpropagation throught time (BTT).
+
+TODO: formula slide 17
+
+TODO: d h3 in d h0, delete ReLU (make assumption of being in linear part, which copies the function), result W to the pow of 3
+
+Problem: if the parameters are below one, when elevated to some power, the gradient will approach zero.
+This is called vanishing gradient.
+If params are greater than one, when elevated to some power, the gradient will be amplified.
+This is called exploding gradient.
+
+This is typical numerical instability associated with the RNNs.
+
+Long-term dependencies are the problem. We would like to check numbers and increase them if they are too low and decrease them if too high.
+But we cannot inject random values in recurrent cells...
+
+Gating (Gated Recurrent Unit --- GRU) is the first mitigation strategy: instead of passing them as they are, they are passed through a gating coefficient.
+
+Long Short-Term Memory (LSTM) substitute h cell with TODO diagram.
+Each block is composed of forget, input and output gates. The sigmoid is applied element wise making them differentiable switches.
+They must be learnable to be differentiable.
+
+C matrix controls how many params of the computed 

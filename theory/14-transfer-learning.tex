@@ -1,0 +1,38 @@
+\section{Transfer Learning}
+Idea: get an already trained network, usually on a general task (e.g. ImageNet), and use its knowledge to train a new model.
+
+The starting point are the weights of the source model, used to teach the model a downstream, more specific, task.
+
+Overfitting occurs when training error decreases but validation/test error increases.
+Often due to the lack of data in the dataset.
+As a rule of thumb, we should have at least one example for each parameter we want to learn.
+But often in deep learning this is unfeasable, we have just hudred or thousand of examples.
+We can see overfitting as a form of epistemic uncertainty.
+
+How to reduce epistemic uncertainty? collect more data or use regularization techniques like weight decay and dropout.
+
+Inductive bias.
+Idea: reduce epistemic uncertainty by injecting prior knowledge on the model.
+We compensate for the lack of data by introducing prior knowledge.
+E.g.
+ - GNNs, in which pose contraints and joints or, in general, graph structure are enforced.
+ - CNNs enforce local relationship between pixels.
+
+Inductive bias can be something enforced by the designer or a prior knowledge transferred from another network.
+If we have enough data this shouldn't be necessary.
+
+Transfer Learning.
+Reuse knowledge from a related data-rich domain to improve performance in data-scarce target domain.
+The initialization is provided by the weight of the model on this data-rich domain.
+We leverage repreesntations learned on the source domain (e.g. Wikipedia for NLP tasks, ImageNet for vision tasks) during the pretraining phase,
+then we adapt it to the target domain (e.g. sentyment analysis for NLP, cancer detection in vision tasks) in a process called fine-tuning.
+
+Assumption: the optimal hypothesis for the target task is likely to be similar to a good hypothesis for the soruce task.
+-> If the model is optimal for source domain, then it will be good in the target domain.
+
+Fine tuning is not the only transfer learning approach, other methods exist:
+ - knowledge distillation: transfer knowledge from a teacher model to a student model
+ - domain adaptation: sample and label spaces are the same but probability distributions change. E.g. first train a detector in RGB images,
+ then train it on RGB images
+
+Transfer learning is now widespread thanks to the reduced design and training effort. See Huggin Face library for instance.

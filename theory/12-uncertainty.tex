@@ -1,0 +1,131 @@
+\section{Uncertainty In Deep Learning}
+Introduction: given a classifer that returns, for instance, [dog: 0.25, fish: 0.5, cat: 0.25], we want to detect if the model is correct
+or not in its classification. An idea could be looking at the highest score, which is not 1, then the classifier has some uncertainty on
+its result.
+
+Estimating the uncertainty is useful to detect the correctness of the model's output. When uncertainty is low, we can ask for human
+intervention.
+
+Eg of a pipeline: X -model-> class, uncertainty. If uncertainty < \tau, then ask human intervention.
+
+Interpretability issue of NNs: we treat them as black boxes and know very little about the inner process.
+
+Overconfidence often occurs in models, this destroys our aim to spot uncertainty.
+
+Out of distribution (OOD) detection: the model should be capable of detecting if the input is out of distribution, so that we do not trust
+their outputs. Without OOD detection the model could allucinate with 'abnoramal' inputs, such as an image with just white noise.
+
+Adversarial attacks: carefully designed patterns can fool the network. This can be used to jailbreak prompts, make road signs invisible
+to autonomous driving cars, and bypass controls in surveillance setups.
+
+Below, we will see techniques for reliable uncertainty estimate.
+
+\subsection{Types of Uncertainty}
+Aleatoric vs epistemic.
+
+Aleatoric uncertainty, or data uncertainty, is inherent to the dataset we are using. It is an intrinsic property of the problem.
+Can be due to, for instance, data noise, class overlap in the dataset, and data generation errors.
+
+For instance: trading is subject to aleatoric uncertainty. No matter how much data we collect, we will not be able to predict future
+stock values.
+
+Epistemic uncertainty, or model uncertainty, arises from the lack of knowledge (of data) about the data distribution or the model
+parameters. In principle, we can avoid it, but it is practically tough.
+
+\subsection{Uncertainty Estimation Techniques}
+Ensemble: we train many independent models on the same dataset (a different slice of it for each of them), with different initializations.
+We then infer from all of them and ensemble their outputs.
+
+Deep ensembles: in deep learning, we can study the uncertainty by looking at the difference between the outputs.
+The less the variance in the output, the less the uncertainty; we can use the variance as proxy for uncertainty.
+
+The disagreement between models reflects epistemic uncertainty.
+
+Predictive uncertainty in regression. Most NNs predict only the mean, optimized via MSE: \sum_{n=1}^N (y_n - \mu(x_n))^2.
+To improve this, we can think of a framework in which the model predits both the mean and the variance; we train it by minimizing the
+negative log likelihood (NLL).
+
+In deep ensamble of regression models, each model outputs both mean and variance. The final output is the average of the means, and the ensembled variance (TODO formula).
+In deep ensamble of classification models, each model outputs TODO: what?
+
+Problem: ensamble has high memory footprint and requires high computational power.
+
+But... The more the models, the higher the confindence. How can we average infinitely many models?
+
+$p(y | x, D) = \int p(y | x, w) p(w | D) dw$.
+The integral sums over all parametrizations of a NN.
+The predictions (left prob) is weighted on the reliability of the weights given the data (right prob).
+The right prob gives us how much the weights are reliable on the dataset.
+Similar to the latent variable approach.
+
+As always, integrals cannot be solved by computers.
+We want to learn a proposed distribution of the weights, this way: $p(y | x, D) \approx \frac{1}{J} \sum_j p(y | x, w_j) where w_j \halfapprox p(w | D)$.
+
+The approximate weight distribution $q_\theta (w) \approx p(w | D)$ can be realized with a Bayesian Neural Network.
+Each weight is now a distribution, not just a single value.
+
+This is called variational inference: from deterministic weights to stochastic weights.
+Given the input, each link has a weight that is a distribution. Then, we sample from weights from the probability of w given dataset.
+This way, we can estimate the uncertainty of the output and the uncertainty of the parameters.
+The narrower the standard deviation, the lower the uncertainty, and the more important the weight.
+The memory footprint of BNNs is higher than normal NNs since, for each weight, we store also the standard deviation.
+
+In Bayesian Neural Networks we can introduce a prior distribution over weights p(w). We can update the posterior p(w | D) via Bayesian learning.
+
+Backprop in BNNs? we want to minimze the negatvie ELBO:
+$$
+L(\theta) = KL(q_\theta (w) || p(w)) - E_{q_\theta(p)} log p(D | w)
+$$
+Right term: minimize the loss, in this case cross entropy.
+Left term: minimize KL distance between distributions.
+
+At inference time, use the reparametrization trick.
+
+\subsection{Advanced Tricks}
+Problem: this framework requires a completely different training and inference structure.
+
+It turns out that dropout is aleady a simplified version of bayesian backprop. We enforce neurons to learn redundant features and we
+avoid co-activation of the neurons. Keep in mind that usually dropout is applied only during traing.
+
+Monte Carlo Dropout (MC Dropout) uses infer-time dropout to estimate uncertainty. How?
+The dropout is applied during inference. Several forward passes are done on the same network, with MC dropout on.
+Then, the different outputs are merged with the deep ensamble approach.
+The number of forward passes is an hyperparameter.
+
+Advantages: no need to change the training framework, lower memory footprint, captures epistemic uncertianty from variation in outputs
+across dropout masks.
+
+\subsection{Overconfidence}
+Deep learning models usually a confidence score, or a series of them.
+They are trained with a ground truth that is usually [0, .., 0, 1, 0, ..., 0], where 1 represents the true class, while 0
+classes to which the input does not belong.
+It's been observed that, even if the network is extremely uncertain about the output, it returns a vector in which a value (a class, for instance)
+has a really high confidence value, while the others almost zero: for instance [0.1, 0.97, 0.05, 0.05].
+
+See: ResNet vs LeNet accuracy-confidence gap.
+
+Example.
+Given a confidence interval, e.g. centered on 0.5 like [0.45, 0.55], we expect that the accuracy is 50\%, aka about half of the
+predictions is correct.
+This is true only of the model is correctly calibrated, meaning, if the accuracy-confidence gap is low.
+
+Reliability diagram are useful plots to visualize accuracy-confidence gap.
+On the ascissa the confidence bins, on the ordinate the accuracy. A lower triangular plot is optimal. Everything different has higher miscalibarion.
+
+There are some metrics to estimate miscalibarion.
+Like Expected Calibarion Error (ECE): given bin $B_m$, $ECE = \sum_{m=1}^M \frac{|B_m|}{n} |acc(B_m) - conf(B_m)|$.
+This is a sum of the discrepancies weighted on the bin size. ECE = 0 means perfect calibration.
+
+It's been observed that the more powerful the model, the more prone to miscalibration.
+Both depth and width increase leads to higher miscalibarion; the only miscalibarion mitigation is increasing the weight decay.
+
+Temperature scaling is an hyperparameter, usually callled T, that enforces a softer softmax: $p(y=k | x) = \frac{exp(z_k / T)}{\sum_{j=1}^K exp(z_j / T)}$.
+If T=1 we have a standard softmax; the higher T, the lower the discrepancy between the peak value and the others.
+
+A calibrated model can be used for out of distribution (OOD) detection.
+If the model is calibrated, the confidence is a good proxy for uncertainty and, consequently, the presence of an error.
+When the uncertainty is high, it can mean the input is out of distribution.
+OOD can be implemented with thresholding of the confidence. Eg. conf > 0.9, then trust the output, otherwise error or out-of-distribution.
+
+ODIN improves in-distribution (ID) out-of-distribution (OOD) separation using an already-trained classifier (no retraining).
+TODO formula

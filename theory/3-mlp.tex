@@ -1,0 +1,116 @@
+\section{Multi-layer Perceptron}
+\subsection{Neural Networks}
+Def. Activation function. non linear functions computed in the output of each neuron. The most widely used are sigmoid, tanh and ReLU.
+
+Sigmoid function is a non linear function modeled by $\sigma(x) = \frac{1}{1 + e^(-x)}$.
+Its domain is the real axis. It squashes any value in the interval [0, 1].
+Below 2.5 and above the 5 we have the saturation regions.
+
+In saturation regions this activation function saturates and kills the gradient. The output si masked from a certain value on.
+Plus, it is not zero centered; when the input is zero, the output is 0.5, which is infeasable from a biological standpoint
+(means consuming energy when non input arrives).
+
+Tanh is a scaled zero-centered sigmoid, modeled by $tanh(x) = 2\sigma(x) - 1$. The codomain is [-1, 1].
+Is called tanh cause the output can be fed into an arctan function to get an angle.
+
+ReLU - Rectified Linear Unit - function enabled deep learning. Modeled by $f(x) = max(0, x)$.
+Contrary to the other two, it does not saturate. This drops the probabilistic model, however we can roll back using a softmax function.
+
+Properties: non linear (due to the max), derivable as 0 for negative values and 1 for positive ones.
+
+According to LeCun definition, neural networs are modeled by a composition of non linear functions.
+As a matter of fact, we can ensable neurons in a graph; neurons are arranged in layers: input layer has the size of the input,
+output layers are the same number of the classes, hidden layers are not dependent on input and output sizes.
+We get a Multilayer Perceptron -- MLP.
+
+Size of the hidden layers? depends, architectural choices are hyperparams. E.g., if we want to learn features, hidden layers
+are bigger than the input one.
+
+MLPs can be modeled as a composition of actiovation functions: $out = \phi(W_3 \phi(W_2 \phi(W_1 x)))$.
+The size of $W_i$ matrices size of output x size of input.
+
+Why using non-linear activation functions? If we remove nonlinearity, we can rewrite the entire network as a linear classifier
+(1 layer logistic regression); composition of non-linear functions is a linear function.
+
+Forward propagation is the process of computing the output given networ's input. It corresponds to the inference process.
+
+Which kind of probelems can a NN represent?
+Theo. Universal Approximation Theorem. A neural network with at least one hidden layer, can approximate any arbitrary continous function with a
+precision $\epsilon$ greater than zero.
+
+If there exist a function that can solve our problem, the NN can learn how to solve that problem.
+The deeper the network, the more its power. $\forall x |f(x) - g(x)| \leq \epsilon$.
+
+Hyperparameters in NN are then number of layers and the number of neurons in each layer.
+The bigger the size and the higher the number of neurons, the more the capacity of the network, also because the higher the number
+of the parameters it can ingest.
+Although, bigger NNs without proper regularization are more prone to overfitting.
+
+Increasing the number of neurons (and parameters), the network easily overfits.
+
+\subsection{Training DNN}
+Idea: setup a loss function and find the params that minimize it.
+
+The loss function measures the quality of network's mapping from input to output.
+The loss function $L$ is composed of two addends: data term and regularization term (penalization term).
+$$
+L(\theta, D) = \frac{1}{N} \sum_{i=0}^N L_i(\theta_i, D) + \lambda \Omega(\theta)
+$$
+
+The regularization term prevents overfitting. The idea is to limit network's memory without reducing parameters.
+Reducing parameters works... but limits network's capacity.
+With the regularization term we ask the training phase to use the less params as possible.
+
+$\lambda$ weights the regularization strength.
+The regularization term depends only on network parameters, not data.
+Regularization usually takes the form of L1 or L2 norm: $\Omega(\theta) = \sum \| \theta \|$ or $\Omega(\theta) = \sum \theta^2$.
+The advantage of L2 norm is that, contrary to L1 norm, is a continous function.
+
+The data loss function depends on the task:
+ classificaiton
+   hinge loss $L_i = \sum_{j \neq y_i} max(0, f_j - f_y_i + 1)$. The idea is to keep a constant offset between learnt and reference function.
+   softmax loss $L_i = - \log (\frac{e^{f}}{TODO})$. TODO
+ regression
+   MSE $L_i = | f - y_i |^2_2$. Asks to minimize difference between reference and learnt function.
+
+We want to learn the set of NN params which minimize the objective function:
+$\theta^* = arg min_\theta \frac{1}{N} \sum_{i=0}^N L_i(\theta_i, D) + \lambda \Omega(\theta)$
+
+As in linear regression, we want to compute the gradients of the loss function wrt to its parameters.
+The algorithm used to compute the gradients is called backpropagation.
+ 
+Remember: chain rule of calculus $ \frac{d g(f(x))}{dx} = g' f' x'$
+
+Backpropagation is a local process, no need to know the complete topology of the network when deriving.
+Let h be the output of a layer.
+h_i --> max(0, W_{i+1} h_i) --> h_{i+1}
+In order for backpropagation to work, each must be able to compute:
+ derivative of its output wrt its weights: delta h i+1 su delta weights di i+1 TODO
+ derivative of its output wrt its input: delta h i+1 su delta h di i TODO
+
+So... during learning we feed the network with x and current w, we forward propagate until we get network's output,
+then NN's output is compared with reference value Y through loss function.
+We then proceed to update weights:
+$w_i^new = w_i^current - \alpha \frac{\delta L}{\delta w_i} = w_i^current - \alpha \frac{\delta L}{\delta h_i} \frac{\delta h_i}{\delta w_i}$.
+Where $h$ of last layer corresponds to output $o$.
+
+The difficult part is computing $\frac{\delta L}{\delta h_i}$, since no direct relationship exists between the two variables.
+Write down the chain of derivatives to be able to compute it.
+
+When initializing the weights in the NN is important to break the symmetry by randomly choosing them.
+If all weights are initialized to the same value, each neuron has the same output, the gradient is the same and the update is the same as well.
+
+Several regulariztion techniques exist. They are needed to avoid overfitting, as usual.
+
+The first one is dropout: consists in turning off random neuron with a drop probability p (hyperparameter) during the training.
+This way, each neuron is sometimes on and sometimes off, it cannot memorize the dataset.
+If wanted, the drop probability can be different for each layer.
+
+Since overfitting occurs when params are much higher than data to learn, so data augmentation is a useuful way to increase data to learn.
+Data augmentation consists of generating new training examples by applying a non-destructive transformation; clearly, labels/classes
+must be preserved.
+The network wants to learn features with the minimal effort. Features are learnt if invariant to the transformations.
+
+Third technique is early stopping. We split the training dataset in training and validation.
+The most common symptom of overfitting is that the loss on the training set decreases, while it increases on the validation set.
+When the two training losses start to diverge, probably the network started to overfit; in this case, we stop training.

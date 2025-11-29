@@ -1,0 +1,205 @@
+\section{Generative Models}
+\subsection{Objective}
+This section is about variational autoencoders and generative adversarial network (GAN).
+
+Given a dataset we want to learn the probability distribution of samples in the dataset, under a certain hypothesis: $P_{\theta}(x)$.
+E.g., form a dataset of cat images, learn to generate a image of a new cat.
+
+Possible objectives:
+ - Sampling: sample new example $x ~ P(x)$ from the probability distribution
+ - Inference: process of computing the probability P(x) of a new data x. This enables anomaly detection.
+
+\subsection{Generative Autoencoders}
+Denoising and contractive autoencoders can implicitly learn the structure of probability distribution p(x).
+
+The simplest generative model is a model that learn $\mathcal{N}{X | \mu_cat \Sigma_cat}$ for each pixel, and samples from that.
+This is an overly simple distribution, plus we are considering pixels independent.
+This generative model operates over the pixel space.
+
+However, we can keep the simple distribution and change just the space on which we operate.
+
+Latent variable models. We relate observable data X to latent variables Z: X -> Z.
+Latent variables represent hidden quantity in the dataset, that can explain the observable data.
+TODO: diagram phi, z, x, phi.
+
+The core of latent variable model is enclosed in the formula: $p(x) = \int p(x \cup z) dz = \dots$.
+Integral of all Zs conditioned on joint prob p(x, z).
+p(x, z) joint probability distribution of x and z.
+
+From Bayes Theorem: $\dots = \int p(x | z) p(z) dz$.
+
+TODO how are called the various parts (marginal, joint, conditionals).
+
+This is an intractable problem, since it is an indefinite integral (upper and lower unbounded), on a continous space.
+We move to a discrete space: $p(x) \approx \sum_{k=1}{TODO}$. We use Monte Carlo integration to solve it.
+
+Sampling procedure:
+ 1. sample z from p(z)
+ 2. sample x from p(x|z)
+ 3. integrate with monte carlo
+
+The portion of latent variable distribution from which we sample has a huge impact on the final result.
+We want to sample from points significant from the distribution.
+
+The \textbf{proposal distribution} is a simple distribution, easier to evaluate, from which we want to sample instead of p(z).
+Proposal distribution (also referred as posterior distribution) provides good sampling points to estimate z.
+Instead of sampling z from p(z) (step (1)), we sample from q(z | x).
+
+Clearly, we want q(z | x) as close as possible to the true posterior p(z | x), meaning the divergence must be as low as possible**:
+$$
+q*(z|x) = arg min_q D_{KL}[q(z|x) || p(z|x)] = ...
+$$
+
+**$D_{KL}$ is Kullback Leibler divergence. The analogous of euclidean distance but for distributions.
+
+$$
+... = E_{z \approx q(z|x)}[log q(z|x) - log p(z|x)] = ...
+$$
+
+From Bayes:
+$$
+p(z|x) = p(x \cup z) / p(x)
+p(x|z) = p(x \cup z) / p(z)
+substituting
+p(z|x) = ( p(x|z) p(z) ) / p(x)
+$$
+
+Putting it into the previous formula:
+$$
+... = E_{z \approx q(z|x)} [log q(z|x) - log [( p(x|z) p(z) ) / p(x)]]
+= E_{z \approx q(z|x)} [log q(z|x) - [ log p(x|z) + log p(z) - log p(x)] ] // Log properties
+= E_{z \approx q(z|x)} [log q(z|x) - log p(x|z) - log p(z) + log p(x) ]  // Consuming the minus
+= E_{z \approx q(z|x)} [log q(z|x) - log p(x|z) - log p(z)] + E_{z \approx q(z|x)} log p(x)  // Exploiting expected value linearity
+= E_{z \approx q(z|x)} [log q(z|x) - log p(x|z) - log p(z)] + log p(x)  // But p(x) is indepndent from z
+= E_{z \approx q(z|x)} [log q(z|x) - log p(z)] - E_{z \approx p(x|z)} [log p(x|z)] + log p(x)  // Rearranging and braking terms inside E
+$$
+
+The first addend is now KL divergence. The final formula is:
+$$
+... = KL (log q(z|x) || log p(z)) - E_{z \approx p(x|z)} [log p(x|z)] + log p(x)
+$$
+
+$$
+D_{KL}[q(z|x) || p(z|x)] = KL (log q(z|x) || log p(z)) - E_{z \approx p(x|z)} [log p(x|z)] + log p(x)
+D_{KL}[q(z|x) || p(z|x)] - log p(x) = KL (log q(z|x) || log p(z)) - E_{z \approx p(x|z)} [log p(x|z)]
+log p(x) - D_{KL}[q(z|x) || p(z|x)] = E_{z \approx p(x|z)} [log p(x|z)] - KL (log q(z|x) || log p(z))
+$$
+
+The second term is the loss function of the variational autoenc and is called ELBO.
+
+Analyzing the terms:
+ - log p(x) is fixed gieven the dataset
+ - D_{KL} is intriniscally positive since it is a distance
+
+Therefore, by maximizing the ELBO we are minimizing the D_{KL} term. The name VARIATIONAL autoencoders comes from this step.
+We are therefore minimizing the variation from the two distributions.
+
+The variational atuoencoeder VAE is an eutoencoder trained to maximize the Evidence Lower Bound ELBO.
+Differently from the standard AE, the variational one does not output a deterministic vector, but the params of a latent distribution.
+
+TODO diagram
+
+x -> Encoder -> q_{\phi}(z|x) -> Decoder -> \hat x
+
+The output is dependend on the distribution on the latent layer.
+
+Therefore: $E_{z \approx p(x|z)} [log p(x|z)] - KL (log q(z|x) || log p(z))$ can be viewed as two addends the minimiaztion term plus the regularization term.
+p(z) is the prior distribution, we have to choose it. We usually use a normal distribution zero centered and with a parametric variance: $p(z) -> \N (z | \mu = 0, \sum = I)$.
+Therefore the posterior distribution is alike a normal distribution with mean and variance returned by the VAE.
+
+In practical terms the VAE returns two vectors, representing the mean and the variance.
+x -> f(x; \theta) = [\mu(x), \sigma^2(x)].
+
+Note that the regularization term acts on the middle of the encoder, while the minimization term on the output.
+We enforce a latent space distribution similar to the gaussian one, without collapsing it to a gaussian, otherwise the process
+wouldn't be invertible.
+
+How to generate new examples?
+Option one, sampling from the posterior distribution.
+However, if training went well, the posterior Q(z|X) is very similar to the prior. We can sample from the prior.
+
+The process to generate new images is getting a sample from the prior (a normal distribution), feeding it to the decoder, and getting its output.
+
+How to make inferece (for instance to perform anomaly detection)?
+From theory:
+$$
+log p(x) - D_{KL}[ q(z|x) || p(z|x) ] = TODO RHS
+$$
+
+Given that the GL divergence is low, we can say that log p(x) is approsimately the RHS term.
+
+Enc -> $\mu, \sigma^2$ -> $z \approx N(\mu, \sigma^2)$ -> Dec
+The sampling step is not differentiable, so the previous pipeline is not end to end differentiable.
+We want something that is backpropagation safe: we use the reparametrization trick.
+The idea is to substitute sampling with: $\epsilon \approx N(0, 1), z = \mu + \sigma^2 \epsilon$; sample noise from normal
+zero mean and shift mu according to a fraction of the sigma squared dependent on the epsilon.
+The sampling is an external procedure.
+
+\subsection{Generative Adversarial Netowrks}
+Note the final s: multiple networks will be there.
+
+Problem: the images generated by VAEs are 
+
+Differently from VAEs, we have no explicid density function. We learn to map noize z ~ p(z) directly to real data via adversarial training.
+
+We train the network to transform a noise vector z ~ p(z) sampled from a distribution to some data that look alike the original ones.
+
+Two actors:
+ - generator: generates data as close as possible to reality
+ - discriminator: given a data from the generator, has the objective to determine if it comes from generator or real dataset, aka if it is real or fake
+
+During training, generator will learn how to fool the discriminator.
+The generator improves over training, it learns how to generate fake data really similar to real ones.
+At the same time, the discriminator improves. It gets better and better in distinguishing if a data is real or fake.
+
+This is a minmax problem, since the two players go towards different objectives:
+minmax[ accuracy/likelihood of distriminator on real data + accuracy/likelihood of distriminator on generated data] TODO complete formula
+The second one is the only one where G is present.
+
+With gradient descent we do not know how to maximaze a quantity. We can put a minus in front of the loss or use gradient ascent,
+which is the same as descent, whith the only difference that there is a plus instead of a minus in front of the gradient.
+
+Notice that one is derived wrt theta_G and the other one wrt theta_D.
+In PyTorch terms corresponds to different calls to backward().
+
+If the discriminator is too good at discriminating and the generator is not generating realistic images yet,
+the gradient received by the generator becomes zero and do not improves quality too early.
+We can maximize log(D(G(z))) instead of minimizing 1-log(D(G(z))); the optimization problem is the same, but the gradient signal is higher
+during initial training phases, in which the generator is still not good at generating realistic images.
+
+TODO trainig algorithm code
+
+The number of training steps of generator and discriminator can be different.
+The exact number of steps depend on how the generator compares with respect to the discriminator.
+
+Be aware that in GANs we don't have explicit distribution parameters, contrary to the VAEs.
+We cannot learn the distribution, just learn from it.
+
+By combining the inputs of the GANs we can obtain combined images from different classes.
+Eg. mixing the input that gives men with glasses, sustracting the input that give men, and adding the input of women; we should obtain
+women with glasses.
+
+Evolution of GANs.
+A series of further improvements regarding the training stability has been published in literature.
+
+CycleGAN performs image-to-image translation, specifically, it translate an input image to the equivalent in a target style (eg. Monet painting).
+Up to this paper this kind of networks were trained with paired examples, an image on the input domain X and an image on the output domain Y.
+This work presents an approach for learning translation without paired examples.
+"Cyclic" comes from the fact that an additional constraint is added (otherwise, the problem would have been constrained): the inverse mapping
+Y -> X has to be learned by the network; the loss is in fact called \textit{cyclic consistency} loss.
+Two different adversarial discriminators are then used: D_Y and D_X.
+The cyclic nature of the network is a way of regularazing.
+
+Problem: GANs provide a fixed resolution output.
+Solution: progressive GANs trains at low resolution and progressively increase resolution up to full scale.
+At each step we increase resoluiton, eg. by doubling size, and retrain the network with an additional layer.
+This way, the network will become capable of generating images at different resolution, even at high ones, without wasting too much 
+memory and computing power. The previously trained layers will give a good starting point to the next training step.
+Nvidia was able to generate 1Mpixels images.
+
+StyleGANs are style-based genertors. It exploits a style vector plugged into the image with AdaIN.
+AdaIN is basically batch normalization plus a rescale and shift whose parameters Y are given by an MLP:
+adain(Y) = Y_s \frac{x - \mu_B}{\sigma_B} + Y_B.
+
+The more the styles is disentangled, the more they are composable.
+Disentangled means dot product near zero. If they are not disentangled one style will overwrite the other one.

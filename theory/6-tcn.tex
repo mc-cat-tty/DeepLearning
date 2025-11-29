@@ -1,0 +1,47 @@
+\section{Temporal Convolution Networks}
+We worked with models that operate on timeseries. Timeseries are sequential numerical values with an order relationship.
+Each timestep has a value, or token, associated to it.
+Remember that sequential models always work with numbers, for e.g., words are converted into their embedding.
+
+Can we use convolution in sequential models? yes, with 1D kernels.
+
+Convolution can be applied to time series, if we represent each word with a vector of fixed length.
+The kernel will be of number of features by kernel depth.
+
+TODO formula. Beware that we are going backward with convolution, not forward.
+
+Intuition: multiply features by weights and sum them up. Obviously the kernel is moved only along the time axis.
+
+Problem: in images we assume that pixels near to each other have similar color values. In time series this is not always true, it
+depends on the sampling frequency and on the underlying problem; e.g. this doesn't hold for problems on text.
+
+In CNNs we increased the receptive field by increasing the number of layers. However, in time series to achieve
+a long effective history size (receptive field) we would need an extremely deep network. We mitigate the problem
+using dilation, which basically consists in picking a token every d tokens instead of a continous sequence of values.
+
+TODO: formula
+
+Standard convolution can access future inputs when computing the output. This is undesirable in CNNs applied to time series;
+in that case, we just want to look at past values. This principle is called look at the past or autoregression.
+
+In TCNs - Temporal Convolution Networks - the model is composed of residual bocks, each made up of two temporal convolutoin layers
+with same hyperparameters. Actually, each block is made up of dilated temporal conv, weight normalization,, activaiton, optional dropout, repeated two times.
+
+As we approach network's output we increase dilation in order to make output catch more and more input context as we increase networks depth.
+
+\subsection{Finance Case-study}
+We could encode stock values and stock news for each token. Each day a different token.
+
+It can be shown that they outperforms other methods.
+
+\subsection{TCN vs RNN}
+In principle, we introduced CNN to have less params than MLP.
+
+TCN is also more stable than RNN, since it doesn't suffer from vanishing and exploding gradient.
+
+Other advantages are:
+ - RNN cannot be parallelized, while CNN and RNN can be. Values for each convlution can be parallelized.
+ - More control over memory. Memory depends on kernel depth.
+ - easier and stable
+
+See: Grad Activation Maps

@@ -1,0 +1,111 @@
+\section{Self-supervised Learning}
+Idea: make the model learn by itself to perform its task.
+
+Pros: easier dataset construction, no need for labeling and human labour.
+
+We have already seen self-supervised models, such as autoencoders and autoregressive models.
+
+Learning to generate pixel-level details is often unnecessary; generative learning requires this level of details, but most topics don't.
+Self-supervision signal we need is just about high level features and abstract representation of the input.
+
+Def. Pretext task (IT: task pretesto). Consists in the generation of different inputs such that the model learns to extract good features.
+The object is designing a pretext task that drives the model to extract good features.
+
+Eg. a task in which, given an image, different versions of the rotated image are generated. The network is trained to predict the rotation of the images.
+We don't actually care about the rotation predictions, what we care about is the network learning the features of the input image.
+
+Semi-supervised learning bigger picture:
+\begin{verbatim}
+Unlabeled data -> self-supervised learning -> feature extractor -> supervised learning -> supervised learning -> evaluate on the target task
+                                                      ^                                                ^
+                                                      |                                                |
+                            Here the model has learnt to identify the input object          small amount of labeled data
+\end{verbatim}
+
+The fine tuning part involves a really small amount of data, something like 10/20 labeled images per class.
+
+The unsupervised learning part teaches the model the 'commonsense', eg. visual commonsense for image rotation.
+However, this knowledge is coarse. We can make it finer with the finetuning step.
+
+\section{Pretext Tasks}
+Is self-supervised learning always worth it? not always, we benefit the most when we have a few annotated data.
+By looking at the accuracy vs training examples curve of selfsupervised vs supervised learning, it turns out that, with a high number of examples,
+the two curves coverge to the same value.
+
+Pretext tasks: predict relative position of image patches, jigsaw puzzles, etc.
+
+Jigsaw puzzles teach the model to recognize each part of the puzzle, but also the relationship with its neighbors.
+Jigsaw puzzles implementation: we generate a finite set of permutation (if we want, all of them), we give as input to the model a
+permutated set of patches and we expect it to classify which permutation has been applied; this way, we created a classification
+task with N! examples, where N is the number of patches.s
+
+Colorization. predicting colors from grayscale images.
+What are we learning? edges, spatial coherence/locality, but also to recognize objects (people have a different color palette than animals, or environments).
+
+\section{Self-prediction}
+Idea: pretend there is part of the data we don't know and train the network to predit it.
+
+See: illustration from Yann LeCun
+
+Types of predictions:
+ - predict the future from the past
+ - predict the future from the recent past
+ - predict the past from the present
+ - predict the top from the bottom
+
+Inpainting is a regression pretext task in which the model is trained to reconstruct a piece of the original image.
+Aka complete an image given the surrounding of a removed patch.
+
+Masked AutoEncoders (MAEs) are fed with image patches, where some patches are masked, and the objective of the network is to reconstruct
+the missing patches. MAEs are usually based on transformers. The loss is MAE only on masked patches.
+Typically an asymmetric encoder-decoder architecture is used. Training is performed masking around 80\% of the original image.
+Since attention has a quadratic cost, we can save a lot of computational cost and memory footprint dropping patches.
+
+Language models can be trained with next token prediction. E.g. GPT.
+
+\section{Contrastive Learning}
+How to teach the model to recognize that two images of different objects represent different classes?
+
+We want that, given some variations of one image, the model learns to associate them to well defined "class", that repels
+images belonging to other classes.
+
+Terminology. Anchor or reference is the original image. Positive images are the ones obtained varying the reference. Negative images
+are images of a different class.
+
+There is the chance that we draw two images of the same class from the dataset. Not a problem as long as the dataset and the batch size
+are big enoug.
+
+We want that score(x, f^{+}(x)) >> score(x, f^{-}(x)).
+x reference. f^{+} positive image. f^{-} negative image. 
+
+Loss functions: contrastive loss, triplet loss, noise contrastive estimation, etc.
+This losses are also used to train face recognition models.
+
+Contrastive loss works on labeled data. Given i, j classes of the data.
+$$
+L(x_i, x_j; \theta_f) = \begin{equation}
+  |f(x_i) - f(x_j)| if i=j \\
+  max(0, \alpha - |f(x_i) - f(x_j)|)
+\end{equation}
+$$
+This is a margin based approach to avoid the model overfitting on too distant data.
+
+With triplet loss the model learns to minimize the distance between the anchor and the positive and maximize the distance between the
+anchor and the negative. This is also a margin based approach.
+TODO formula
+
+See: InfoNCE that allows to treat the problema as a classification one.
+
+SimCLR - Simple Framework for Contrastive Learning. Given a reference image, two different data augmentation operators are applied.
+InfoNCE loss is used TODO formula.
+Given a dataset of N images, we generate N' and N'' sets with transformations t' and t''.
+Given the reference x, then t'(x) and t''(x) must be recognized as as similar as possible. While the remaining combinations of
+(reference, 2(N-1)) must be recognized as as dissimilar as possible. 2 (N-1) since we have N-1 image from N' and N-1 from N''.
+Numerator is similarity between positiee pairs, the denumerator is sum of similarities between reference and all negative pairs.
+During training, both the transformed images are passed through the encoder, then through a (usually) linear projector; the final result is used
+as loss input.
+At inference time, only the linear projector is discarded; the intuition is that the encoder carries much more information than the linear
+layer.
+
+Skip Barlow Twins.
+
