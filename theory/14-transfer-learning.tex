@@ -36,3 +36,141 @@ Fine tuning is not the only transfer learning approach, other methods exist:
  then train it on RGB images
 
 Transfer learning is now widespread thanks to the reduced design and training effort. See Huggin Face library for instance.
+
+Fine tuning step is usually carried out with different learning rates depending on the layer: TODO
+
+Fine tuning can sometimes distort the pretrained featuers, leading to low OOD distribution.
+Solution: Linear Probing + Fine Tuning (LP-FT):
+ 1. LP: train the linear classifier while the backbone is frozen
+ 2. FT: fine tuning the whole network starting from the classifier
+
+LP-FT maximizes both ID and OOD accuracy.
+
+This two steps solution avoids features distortion by "enforcing" original features adaptation of the classifier;
+this way, the fine tuning step cannot radically change the features, instead, it must maintain a coherency with original backbone features,
+already learned by the head.
+
+While the weights are kept frozen, the BatchNorm stats are updated to match the target domain. The running mean and variance are updated.
+It is equivalent to running one epoch with SGD and learning rate zero.
+
+Intuition: adjust the domain shift between the two datasets.
+
+Finetuning limitations.
+Architectural rigidity. We inherit the arch of the pretrained model, which may not be optimal for the new task.
+TODO complete list.
+
+CNNs pretrained from ImageNet are biased towards texture, not shape.
+Large storage requirements. Fine tuning updates the entire set of params, once in the forward pass, once in the backprop.
+Aka, given a model like DeepSeek, it costs us the same (in terms of memory) as it costed to the original developer to train it the first time.
+Not always feasable as far as the GPU memory is concerned.
+
+Given these fine tuning cons, we will transition to the feature student approach.
+
+Remember: the deeper the model, the better (usually). The reason is that features extraction is more structured.
+Deep ensembles for model undertainty: replicate the same model N times, uniformly partition the dataset in N slices, train each model instsance
+with different random initialization. Similar to bagging.
+Inference is performed given the same input to all instances and ensambling the outputs through majority voting.
+The uncertainty can be estimated by looking at the divergence of the N outputs.
+
+This is really inefficient.
+Proposal: use two different models, once optimized for feature extraction, with heavy regularization and ensamblement; use a different model, lighter,
+and with lower computational and memory footprint.
+Teacher-student approach is called knowledge distillation. We want a input-output association similar to the original model, but with a different
+and more efficient structure.
+
+Idea: train the student model to mimic the output distribution of a larger teacher model.
+We want to smooth teacher output using a softmax parametrized on a temperature.
+
+Training procedure:
+ - make a forward pass with the teacher -> we get logits z_t
+ - make a forward pass with the student -> we get logits z_s
+ - update student params in order to minimze this mixed loss function: L_student = \alpha L_CE (y, \sigma(z_s)) + (1 - alpha) etc
+TODO: loss
+
+Alpha is an hyperparameter. TODO: meaning
+
+Students usually performs at least as good as the teacher. This is due to the fact that smoothing softmax generally improves performances
+over a one hot encoding.
+
+Knowledge Distillation is abbreviated with KD.
+
+Dark knowledge. All the non zero outputs outputed from a classification problem. In one hot encoding this is masked by the more probable, picked class.
+Howerver, with temperature, also the cross correlation between the input and the output non domiannt classes are learned.
+
+To improve the computational inefficient log that comes out from the cross entropy, we can use a MSE between the weights right after
+the logits. TODO: why this works?
+
+KD can also be applied to the same architecture. This way, we exploit the regularization property that comes from the distillation.
+
+Similarity preserving knowledge distillation (SP KD): instead of matching only the outputs of the networks, preserve the pairwise similarities
+between samples in the feature space.
+
+Attention transfer. Instead of matching features maps, transfer the attention maps from teacher to student.
+The attention map can be computed with A = 1/C sum_1^C |F_c|^p; summing all the feature channels. p in {1, 2}.
+Since it's not given that the teacher and the student have the same architecture and the same dimensionality, we have to perform
+a downscale or upscale (e.g. with linear layer) to match the two activation maps size.
+
+FitNets TODO.
+
+Self-KD applies KD to the same architecture. TODO.
+
+Problems of full finetuning.
+High computational demands: high memory and computation footprint since all the weights have to updated.
+Finetuning on a dataset different from the pretraining dataset usually leads to an accuracy higher than the pretrained accuracy.
+Finetuning on the same dataset typically leads to performance degradation; a phenomenon called forgetting kicks-in: the model forgets
+data from the original dataset not re-feed during FT.
+
+These are the needs for parameter efficient finetuning.
+
+In transformers, the input sequence of tokens is called prompt, even if the tokens come from an image patches.
+E.g., Visual Transformers (ViT) split the input image into patches, pass the patches into a linear pojection layer to create embeddings that
+encode the patch and its poition, the output of this phase is the prompt. The prompt is given to an encoder, or a series of it, which
+outputs a CLS token given to a MLP head.
+
+Il transformers full finetuning we should update all the learnable params from all the blocks: norm, MHA, and MLP.
+
+Prompt tuning is a lightweight PE FT for transformers: all layers are frozen except for the MLP head and the learnable input tokens.
+Two variants: shallow and deep prompt tuning. In shallow variant input tokens are given only for the first layer.
+In deep variant learnable tokens are added to each layer.
+Why does it work? the new weights interact with the other tokens. The input tokens are adjusted during learning phase in a way that changes
+the behavior of the model (think about it as different prompt beginning for GPT). The new tokens have an impact on the MHA mechanism.
+
+Prefix Tuning. Key and value vectors are extended with P^K and P^V parameters, of length l. The query is not updated.
+The output of the attention does not change since it depends only on the query size.
+Intuition: it works by adding task-specific information in the attention memory.
+Pro: outpeforms prompt tuning, less than 1\% of model parameters are trained, no model duplication since we can just change the prefix,
+preserve pretained knowledge by freezing the original weights.
+
+Example: AdaptFormer. The original layer norm - MLP are replaced by an architcture that puts on the residual branch three learnable layers.
+The learnable layers have a shape that enforces a bottleneck, like in autoencoders. The layers are: donw, ReLu, and up; a scaling
+(multiplicative factor) factor S at the end is used to weigh the residual branch contribution.
+Low S preserves original knowledge, while high S allows the model to overwrite the original knowledge.
+The bottleneck shape is usually chosen when we want to reduce the number of params. It's equivalent to A * B product with NxR and RxM ranks.
+The lower the inner rank, the lower the number of learnable params.
+
+Adapters are a common design pattern in NNs. Adapters can be parallel, like in AdapterFormer case, or sequential; sequential adapters
+put an adapter right after the original frozen layers. TODO diagram
+
+Reparametrization-based fine-tuning. Given W_0 weights of the pretrained model (starting point) and W_end the weight matrix at the end
+of the full finetuning, we can compute the displacement as: $\delta W = W_end - W_0$, or $w_end = W_0 + \delta W$.
+Instead of learning the full displacement matrix we learn a function that reparametrize it, which needs much lower params number than
+original delta.
+
+Low Rank Adaptation (LoRA). The chosen function by LoRA is a matrix multiplication: $\delta W = B * A$, with NxR and RxM ranks.
+As always, the lower the inner rank, the lower the number of learnable params. Really similar to a parallel adapter (you can see it form
+its name); contrary to adapters, we have not activation layers between the two matrices.
+What about the init of A and B? the B is usually initialized with zeros, while A is init with random noise sampled from a gaussian.
+LoRA formula: $h = (W_0 + BA) x$. At the beginning BA term vanishes. This ensures a stable initialization that uses only stable params
+from pretraining. R is an hyperparameter.
+
+During learning: In the forward pass we add a residual branch with AxB and update A and B weights without touching W_0.
+Then, I can perform a merge operation updating W: $W = W_0 + A \times B$.
+During inference: the same cost as in pretrained model, same memory footprint, same architecture. No additional overhead at inference
+time.
+
+You can skip LoRA variants.
+See: VeRA, a LoRA variants in which A and B are initialized with noise and kept frozen. We learn two correction vectors. The same A and
+B shared across all layers.
+
+Singular Value Fine-Tuning (SVFT) uses Singular Value Decomposition (SVD) to decompose the matrix into U sigma V^T. Since sigma is diagonal
+it has low mem footprint. We sum a diagional learnable matrix to it.
