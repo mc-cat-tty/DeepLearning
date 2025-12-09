@@ -1,0 +1,103 @@
+\section{Continual Learning}
+The problem of fine-tuning is that it typically leads to a loss of memory about the original knowledge of the model.
+
+This phenomenon is called catastrophic forgetting. Contrary to humans, when NNs are retrained on a new sequence of tasks, forget the old task.
+Studied by Barnes and Underwood in 1959 for the first time.
+They discovered that a light forgetting behaviour is exhibited by humans too, but not as pronounced as the one in NNs, hence the 'catastrophic' adjective.
+
+Why does it happen? the loss landscape for different tasks can be optimal in very distant regions.
+Vanilla gradient descent is greedy, in the sense that it optimizes the network just to reach a region of low error for one task at a time, not taking in to account the previous ones.
+
+Objective: we want to reach an optimum that minimizes enough both Task A and Task B, training first on Task A, then on Task B.
+We cannot mix the datasets since we observe dataset B after dataset A.
+
+Idea: freeze the important weights of Task A and optimize the remaining one.
+To characterize the importance of the weights we can use, for instance, a Bayesian Neural Network.
+
+Continual Learning (CL) studies how to train a model from a stream of data. Aka, in CL we want to adapt the model online, without retrain
+the whole model on all the data. CL is an alternative to joined training: a strategy in which datasets from two or more tasks are joined and
+the model is trained on all of them. This strategy avoids catastrophic forgetting.
+
+Elastic Weight Consolidation (EWC) is the first mitigation of catastrophic forgetting, introduced by Kirkpatrick et. al. in 2017.
+Biologically inspired: we introduce the plasticity of the brain to a NN weights, avoiding modifications to vital, hence non-plastic,
+synpses (synaptic consolidation).
+
+EWC contraints important params to stay close to the old values by introducing a quadratic anisotropic penalty as a regularization term of the new loss function:
+$$
+L(\theta) = L_B(\theta) + \sum_i \frac{\lambda}{2} F_i (\theta_i - \theta_{A,i}^*)^2
+$$
+
+First term is the loss function on the new task, which can be something like a cross entropy.
+The parenthesis is the distance between old weight i, and the current value of the weight i.
+The function F_i weighs the distance penalty depending on the importance of weight i (thus the i subscript).
+F_i is a proxy of the importance of the i-th weigth for Task A, a property called plasticity above.
+Lambda is an hyperparam to weigh the contribution of the penality over the new loss function.
+
+F_i requirsrequires to determine how much each param is immportant.
+EWC uses the Fisher Information Matrix (diagonal matrix) computed at the optimum $\theta_A^*$ of the first task.
+
+$I_{\theta_A^*} = \frac{1}{N} \sum_i (\derivative{L(x_i}{\theta_i})^2 \approx F_i$
+
+Why are we using the gradient to quantify the importance of each weight?
+Intuition: if the loss landscape is quite flat, we can perturbe the parameter without too much impact on the final result.
+The square throws away the sign and modulates the importance of the gradient: high gradients are more penalized than small ones.
+The second order derivative, or, as in this case, the square of the 1st order (a proxy of 2nd order one), describes the geometry around
+the minimum.
+
+High 2nd order derivative marks an imporant weight for a task.
+Graphically, it represents a deep minimum valley in the loss landscape, for which we do not have much wiggle rooom.
+A slight move of that weight leads to a big change in the loss, and hence in the performance of the model on Task A.
+
+Evaluation protocol.
+The training phase is sequential: first Task A, then Task B; we cannot mix the datasets since we observe datapoints sequentially.
+In the testing phase the model is evaluated jointly (dataset A + dataset B).
+
+We usually observe a trend in which the more the learned tasks, the lower the accuracy over all the tasks.
+
+3 Continual Learning settings.
+Task Incremental Learning (Task-IL). During learning each task is learned separately as always.
+Each example is coupled with its task identity (aka the task number: Task 1, Task 2, etc.), so that the output of the model can be
+masked depending on the task number.
+In a classification task between 0-1 first and then 2-3, the classes are something like 0, 1, 2, 3.
+
+Differently from above, in Class-Incremental Learning (Class-IL) setup, the task identity is not provided at test time.
+This is more challenging since we introduce an additional source of error above the baseline task: confusing the classes of the examples.
+
+In Domain-Incremental Learning (Domain-IL) the set of classes remain the same.
+In a classification task between 0-1 first and then 2-3, the classes are always 0, 1.
+We just shift the domain, not the output classes.
+
+Solutions.
+Taxonomy of CL approaches:
+ - architectural methods: we redesign architecture to overcome catastrophic forgetting problem
+ - regularization methods: we add regularization terms to prevent underperformance on old tasks
+ - replay methods: we store datapoint from older tasks and replay again during the new training cycles
+
+
+Architectural methods.
+Weight sharing. Forgetting is observed since the training on new tasks changes the same set of weights as the one trained on previoius tasks.
+This is the main cause of inter-tasks interference.
+We can mitigate it through architectural methods, devoting disnstinct sub-modules to disnstinct tasks.
+
+See: Progressive Neural Networks, in which each column is devoted to a task. TODO diagram. The connections across columns, called lateral connections,
+are meant to reuse the information learnt from a previous task.
+
+Problems:
+ - selection problem. At inference time, we need to know the task identity to select the right column. Suitable only for Task-IL.
+ - unbounded memory footprint. The more the tasks, the higher the memory footprint.
+ - lateral connections allow knowledge trasnfer in only one direction
+
+TODO: abbiamo fatto altro in mezzo?
+
+PackNet exploits redundancies in deep learning netowrks to free up parameters tahta can be employed to learn new tasks.
+It interatively prunes the newtork and retrain it using the freed up space. This data reusage solution allows zero storage overhad and
+minimal performance drop.
+E.g.
+ - Train on Task 1 (T1)
+ - T1 pruning mask the unimportant wewights
+ - Retrain on T2 with mask from previous task
+ - T2 pruning
+ - Retrain on T3 with new binary mask
+ - etc.
+
+This is an hard version of EWC.

@@ -174,3 +174,14 @@ B shared across all layers.
 
 Singular Value Fine-Tuning (SVFT) uses Singular Value Decomposition (SVD) to decompose the matrix into U sigma V^T. Since sigma is diagonal
 it has low mem footprint. We sum a diagional learnable matrix to it.
+
+Scale-and-shift methods are a class of PEFT similar to reparametrization.
+The idea is to apply an affine transformation to each internal activaiton layer.
+Remember that an affine transformation consists of a scaling and a shift: $x' = \gamma x + \beta$.
+
+BitFit (Bias-terms Fine-tuning) is a subclass of Scale-and-shift methods that fine tunes only the bias of each layer.
+
+(IA)^3 is a method specifically designed for transformers.
+The idea is to apply a scaling vector l_k to both key and query matrices, and a scaling vector l_v to the values;
+after the non linear layer another scaling vector is applied.
+
