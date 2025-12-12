@@ -1,0 +1,35 @@
+name: Release Notes PDF
+
+on:
+  push:
+    branches: ['main']
+
+  workflow_dispatch:
+
+
+concurrency:
+  group: 'release'
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Install dependencies
+        run: sudo apt install -y texlive-latex-base texlive-fonts-recommended
+      - name: Compile PDF
+        run: pdflatex -jobname=$(jq -r ".name" manifest.json) -output-format=pdf main.tex
+      - name: Create a release
+        run: | 
+          LATEST_VERSION=$(gh release list -L1 --exclude-drafts --exclude-pre-releases --json tagName | cut -d ':' -f 2 | grep -o '[0-9]')
+          CURRENT_VERSION=$(echo $LATEST_VERSION+1 | bc)
+          gh release create --notes-file manifest.json v$CURRENT_VERSION $(jq -r ".name" manifest.json).pdf
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        
