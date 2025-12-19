@@ -1,0 +1,107 @@
+\section{Federated Learning}
+\subsection{Problems of Centralized ML}
+Centralized ML has several problems, the biggest ones being: single point of failure and not scalable resources. \\
+We would like to use a network of devices to train a model with more data.
+Exchanging data (aka slices of a dataset) requires high bandwith and may produce a privacy violation.
+
+Setting: several clinics that deal with different types of medical problems (broken legs, broken arms, and fractured skull) want to
+create a unified model to perform recognition on a X-ray image.
+
+\subsection{Basic Idea}
+Instead of chaning data, the idea is to aggragate them by training a model from the local data, so that the dataset is both compressed
+and privacy is not violated. Each node of the network collects its own data and train its own expert model.
+Then, the nodes exchange the expert model to the server, which is in charge of creating the final model by putting together
+knowledge from all the experts.\\
+We usually follow a client server architecture.\\
+The server is initialized with a given network (that could be pretrained), communicated at the beginning of the process with all the clients.\\
+The clients perform local training on their data, and, for instance each hour (no need to send at each epoch), send a partially trained model to the server.\\
+The server performs aggregation and send it back to the clients.\\
+This is repeated until convergence.
+
+Note that different aggregation strategies exist, called \textbf{model merging}.
+Independently from the aggregation strategy, we want the merged model to be good at the task on all the dataset slices.
+
+Key challenges are:
+ - data heterogeneity (non IID-data): clients data may have different distributions, e.g. classify different classes
+ - privacy
+ - drifting, global agreement, TODO complete
+
+\subsection{FedAvg}
+Uses \textbf{averaging} as merging method.
+
+Steps:
+ 1. Init. Server sets w^0 as global model parameters
+ 2. For each round i = 1 ... T:
+  a. Select a subset of clients
+  b. Send the current model to all clients
+  c. Each client uses that weights as starting point
+  TODO: formula. Each model is weighted against the number of samples on which it's been trained.
+
+Why are we sending back the merged model to the clients?\\
+Remember: the optimization goal of clients is local, while the server side objective is over all the data.\\
+We want the global model to be good at all tasks for which the clients provide data.
+Having a global starting point allows the clients to pull back the model towards their optimal point even if the global model starts to
+drift towards the optimum of other clients.
+
+Limitations: if clients have objectives far in parameter space, we could never converge to an optimal solution.\\
+Ideas:
+ - client-side approach: regularize data so that the local train objective goes not only towards the local optimum, but keeps into account also the
+optimal direction of all the other clients.
+ - server-side approach: use an aggregation strategy that accounts for this.
+ - client-server approach: combines both the above methods. TODO: explain in much detail
+
+\subsection{Server-side Approaches}
+Problem: params averaging treach every weight dimension as equally informative, however it shouldn't be like that.\\
+Each dimension of parameters space can have different importance for each client, we could weigh the contribution of each client
+on the importance of the dimension of the client.\\
+In \textbf{Fisher-Weighted Averaging} each client shares the importance scores, computed with \textbf{Fisher Information Matrix}, and
+the server accounts for that when merging the model.
+
+Weights that are very important for a client are more problable to be used in the global merged model.
+
+Formally. Let thetas be weights, capital F fisher matrix, lambda an additional coefficient 
+$$
+\theta^* = \frac{\sum_{i=1}^c \lambda_i F_i \theta_i}{\sum_{i=1}^c \lambda_i F_i}
+$$
+The dividend is a normalization factor.\\
+What happens if a weight is equally important to all the clients? the formula collapses to simple averaging.
+
+TODO: proof that the formula is the optimal solution of an optimization problem.
+
+We can frame the problem as: \theta^* = arg max ... TODO\\
+The global marged model is the set of weights that maximized posterior joint probability over the local models ???
+Each term is p(\theta | \theta_i, F_i), aka the probability that the weights theta given theta_i and F_i.
+How to compute the posterior probability given a set of weights?\\
+We can use a gaussian to model it: N(\theta | \mu = \theta_i, \frac{1}{F_i}). Like in Gaussian networks.
+We basically have a gaussian for each weight, aka each scalar of the network.
+There is a direct link between the covariance and the Fisher matrix.
+Since the smaller the covariance the higher the importance (aka higher value on Fisher matrix), we can use one over the Fisher Matrix
+as standard deviation.
+
+Problem: if optimal directions still diverge for some clients, the merged model is not optimal.\\
+Solution: the idea behind \textbf{SCAFFOLD} is to share not only the weights but also the directions of the weights (aka gradients).\\
+The server takes the directions and finds a direction that is good for all the clients.
+TODO formula. The idea is tho take the current gradient directions as always in gradient descent, adjusted on a direction that is globally
+optimal.
+
+\subsection{Prototype-based Approaches}
+What are prototypes in ML? with a ML algo we assign a class to each datapoint; the centroid of the points of a class is called a prototype. \\
+A prototype is a compact representation of all the points of a class. For instance, they can be used to solve classification problems using the
+distance between a new point and a prototype.
+See: Medoid? 
+
+We could use an activation layer in which prototypes are used and share prototypes to the server.
+
+In \textbf{FedProto} each client computes a prototype for each class and sends it to the server.\\
+The server aggregates prototypes by averaging them and sends back the result to the clients.\\
+The clients use the aggregated prototype as regularization factor.
+
+The difference between FedProto and SCAFFOLD is that the latter makes corrections to the parameter space, whilie the former one in output/data space.
+
+Another advantage is that prototype based approaches allows merging of different architectures.\\
+With different architectures, the parameters space drastically changes, while in output space we can easily adapt outputs of different architectures.\\
+This is called \textbf{heterogeneous federated learning}.
+
+Note that FedProto can be though as knowledge distillation we have seen in the teacher student approach, in which we penalize the student,
+represented by the global model, using the divergence from the teachers output.\\
+Another advantage of prototypes is the memory footprint and bandwith usage: output space is usually smaller than params space.

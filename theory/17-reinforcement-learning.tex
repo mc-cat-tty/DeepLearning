@@ -1,0 +1,121 @@
+\section{Reinforcement Learning}
+TODO: up to slide 12
+
+\subsection{Agent and Environment State}
+\defbox{Agent state: encodes information the agent uses to pick the next action. It's the information used by the RL algorithm.}
+\defbox{Environment state: encodes information the in.}
+
+\subsection{Agent's Parts}
+\defbox{Policy: the way the agent acts. Maps the state to the action.}
+\defbox{Return: total discounted (e.g., exponentially decayed) reward from now up to the end of the episode.}
+\defbox{Value function: prediction of future rewards; used to evaluate the goodness or badness of states.}
+TODO: difference between state-value function and actions-value function. One takes the input only the state, while the other also the actions.
+
+Bellman expectation equation (hot topic at the exam).\\
+Idea: unroll gain, group so that the expected value becomes dependent on next reward plus discounted value of future rewards.
+
+See: model-free predictions, the only one we are going to see.
+
+\subsection{Maze toy problem}
+The output is basically a map of state (maze tile) to integer. The integer represents how convenient is for the model to pass
+from that state.
+
+Incremental Monte-Carlo Updates. TODO.\\
+Problem: slow. In maze would require 2000 iterations.
+
+TODO: mi sono perso qualche parte
+
+What if we want to learn $v_\pi$ online from experience under a policy $\pi$?\\
+ - incremental every visti monte carl. Update visit value when the actual reward is given, at the end of the state
+ - simplest temporal difference (TD) learning algorihtm. Update visit value toward the estimated return. No need to wait until the reward.
+ we can update multiple times during an episode. TODO: formula. The intuition is that uncertainty changes during the episode.
+
+MC vs TD
+TD can learn before knowing the final outcome, works also in never ending episodes.
+
+Bias/variance trade-off.
+Compared to MC, TD is an heuristic. It doesn't lead to the optimal solution (the result is sligthly biased), however it is a better solution
+than the one obtained with MC waiting the same number of epochs.
+
+\subsection{Policies}
+Greedy policy. Always choosing the action that maximizes reward according the the value function prediction.\\
+Problem: we end up not exploring the environment.\\
+
+$\epsilon$-greedy exploration (hot topic at the exam). Mixture of the two. With a probability of $1-\epsilon$ we choose the optimal action,
+otherwise the TODO.
+Both conservative and exploratory.
+
+On- vs off-policy. Sampling behaviour from my policy, vs sampling the one from some other agent.
+
+How do we update the value function wrt a new policy?\\
+Update evuluation vs improvement until they converge.
+
+\subsection{SARSA}
+Algo for on-policy control.
+
+Pseudocode:
+Init Q, A
+Init S
+Choose A from S using a policy derived from Q
+from each step of episode do
+ take action A (up to this point we have S and A). Observe R and S'
+  Choose A' from S' (sample next action) using policy derived form Q
+  TODO: complete
+
+SARSA -> look at how these letter appear into the algorithm\\
+Notice how the actions are chosen both from the same Q, the same policy. This is in fact an on-policy method.\\
+"Behave my way and observe what happens with a different policy"
+
+\subsection{Q-learning}
+Difference between SARSA and Q-learning. Hot question at the exam.
+
+TODO Pseudocode
+
+Sampling the action from Q, like epsilon-greedy.\\
+While updating uses a greedy policy.
+
+Why is it good? we are exploratory when we choose the action, but conservative when we update the value function.
+We are basically removing uncertainty when we update. The clean is as clean as possible.
+
+\subsection{Introducing Learning}
+Up until now we haven't used any learning technique.\\
+The problem is: we are just learning the edges of a finite automata. The value function is mapping every possible state to a value.
+
+With learning we don't want to learn policies, but value functions!!
+
+The final goal is a learnable generalized value function that, by definition, is an approximation.\\
+Two common approaches: neural networks or linear combination of features (just a linear layer, subclass of NNs).
+
+The objective is J(w) = (v_pi (S) - v^*_pi (S, w))^2. We want to find a vector that minimizes it.\\
+Let's say that the reference value function is given to us by an oracle.
+
+Feature vectors. We want to represent state by a feature vector. No longer just a state.
+In the J(w) formula we substitute the state S with a vector.
+
+The reference value function is not given by an oracle, obviously, otherwise we would just use it.\\
+We can use MC or TD to compute it. As usual, the drawback of MC is that we have to wait until the end of the episode to get the reward.
+
+The same goes for the action value function.
+
+Pay attention to the convergence of prediction algorithms.\\
+MC alway converges, independently from on/off policy, table lookup, linear or non linear.
+TD(0) doesn't converge in non-linear on policy, and linear and non linear off-policy.\\
+TODO table
+
+See: batch methods
+
+This linear learning is not enough to learn to play SuperMario.
+
+DQN -- Deep Q Networks. They use experience replay and fixed Q targets.\\
+The idea is to have a frozen and a learning network. The frozen one is called anchor and is indicated with a minus at the exponent.\\
+We use minibatch transitions (state, action, rewards, next state). The loss function is the Q-learning error (target minus current).\\
+Initially, the Q inside the max is frozen. The only signal the network sees is the reward.
+The reward is super clean since it is given depending on the non anchored Q.
+Every minibatch (?) (whatever, once in a while) we update the frozen Q with the current Q.
+
+When the two weights Q and Q frozen are close enough, convergence is reached.
+
+See: Richard Sutton
+
+DQN is off policy. Again, we take action with epsilon greedy policy, and we update the value function just a max, so a greedy policy.
+
