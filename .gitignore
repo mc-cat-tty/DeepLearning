@@ -8,3 +8,10 @@
 *.dvi
 venv/
 data/
+
+*.log
+*.aux
+*.dvi
+*.pdf
+*.toc
+*.out
