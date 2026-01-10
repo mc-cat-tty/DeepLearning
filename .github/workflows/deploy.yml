@@ -21,9 +21,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Install dependencies
-        run: sudo apt install -y texlive-latex-base texlive-fonts-recommended
+        run: sudo apt install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended
       - name: Compile PDF
-        run: pdflatex -jobname=$(jq -r ".name" manifest.json) -output-format=pdf main.tex
+        run: pdflatex -jobname=$(jq -r ".name" manifest.json) -output-format=pdf main.tex && pdflatex -jobname=$(jq -r ".name" manifest.json) -output-format=pdf main.tex
       - name: Create a release
         run: | 
           LATEST_VERSION=$(gh release list -L1 --exclude-drafts --exclude-pre-releases --json tagName | cut -d ':' -f 2 | grep -o '[0-9]')
