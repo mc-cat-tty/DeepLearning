@@ -1,15 +1,88 @@
-\documentclass{report}
+\documentclass[12pt,english]{article}
 
-\setcounter{secnumdepth}{-1}
+\usepackage[final]{style}
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{amsmath}
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{subfiles}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{enumerate}
+\usepackage{subfiles}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{subfiles}
+\usepackage{tcolorbox}
+\tcbuselibrary{theorems}
+
+% Separator
+\newcommand{\separator}[1]{
+  \clearpage
+  \thispagestyle{empty}
+  \vspace*{\fill}
+  \begin{center}
+    \Huge \bfseries #1
+  \end{center}
+  \vspace*{\fill}
+  \phantomsection
+  \addcontentsline{toc}{part}{#1}
+  \clearpage
+}
+
+\newcommand{\defbox}[1]{
+	\begin{tcolorbox}[
+		colback=blue!5!white,
+    colframe=blue!75!black,
+  ]
+  \textbf{Def.}\space#1
+  \end{tcolorbox}
+}
+
+\newcommand{\theobox}[1]{
+	\begin{tcolorbox}[
+		colback=blue!5!white,
+    colframe=blue!75!black,
+  ]
+  \textbf{Teo.}\space#1
+  \end{tcolorbox}
+}
+
+\newcommand{\proofbox}[1]{
+	\begin{tcolorbox}[
+		colback=cyan!5!white,
+    colframe=cyan!75!black,
+  ]
+  \textbf{Dim.}\space#1
+  \end{tcolorbox}
+}
+
+\title{\textbf{Deep Learning [EN]}}
+\author{Francesco Mecatti}
+
+\makeatletter
+\def\@maketitle{
+\begin{center}
+{\Huge \bfseries \sffamily \@title }\\[4ex] 
+{\Large  \@author}\\[4ex] 
+\@date\\[8ex]
+\includegraphics[width=40mm]{imgs/ai-free.png}
+\end{center}}
+\makeatother
 
 \begin{document}
-\tableofcontents
+\clearpage\maketitle\tableofcontents\clearpage
 
-\chapter{Theory}
+\separator{Theory}
 \input{theory/1-introduction.tex}
 % \input{theory/2-refresher.tex}
 
-\chapter{Labs}
+\separator{Laboratory}
 \input{labs/1-pytorch-intro.tex}
 \input{labs/2-pytorch-logreg.tex}
 % \input{labs/3-pytorch-mlp.tex}
