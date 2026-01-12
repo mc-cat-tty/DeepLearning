@@ -134,7 +134,7 @@ During the gradient descent, the update of each weight is done according to the 
 w_j = w_j - \alpha \frac{\partial{\mathcal{L}(w)}}{\partial{w}}
 \end{align*}
 
-The cost function used in gradient descent is called objective or loss function, and it is typically denoted with $L(\cdot)$ or $J(\cdot)$.
+The cost function used in gradient descent is called objective or loss function, and it is typically denoted with $\mathcal{L}(\cdot)$ or $J(\cdot)$.
 
 This is the vanilla rule: \textbf{batch gradient descent}.
 It is called batch since we have to run the average $\frac{1}{N} \sum_{i=1}^N [\dots]$ through all $N$ training examples.
@@ -151,7 +151,7 @@ This time, no average is needed: speed is traded with stability.
 Full batch gradient descent is best one, minibatch is in the middle, the worst is the fully stochastic version.
 The same order holds for speed, from slowest to quickest.
 
-To avoid being stuck to local minimums and traveling zig-zags with SGD, we use strategies like \textbf{ADAM} -- Adaptive Moment Estimation.
+To avoid being stuck at local minimums and traveling zig-zags with SGD, we use strategies like \textbf{ADAM} -- Adaptive Moment Estimation.
 The \textbf{momentum} smooths out the path towards the minimum with a \textbf{weighted moving average} of past gradient:
 the older the gradient the lower the weight.
 It combines momentum with an \textbf{adaptive learning rate} to slow down descent while approaching the minimum (magnitude of the gradient is used to estimate it).
