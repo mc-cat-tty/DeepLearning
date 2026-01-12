@@ -63,6 +63,15 @@
   \end{tcolorbox}
 }
 
+\newcommand{\obsbox}[1]{
+	\begin{tcolorbox}[
+		colback=green!5!white,
+    colframe=green!75!black,
+  ]
+  \textbf{Observ.}\space#1
+  \end{tcolorbox}
+}
+
 \title{\textbf{Deep Learning [EN]}}
 \author{Francesco Mecatti}
 
@@ -82,6 +91,7 @@
 \separator{Theory}
 \input{theory/1-introduction.tex}
 \input{theory/2-refresher.tex}
+% \input{theory/3-mlp.tex}
 
 \separator{Laboratory}
 \input{labs/1-pytorch-intro.tex}

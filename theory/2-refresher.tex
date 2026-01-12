@@ -15,8 +15,10 @@ $$
 
 Tip: logistic regression probability formulas can be obtained modeling log-odds equal to the value of $w^T x + b$.
 
+\obsbox{
 The probability of a point being one and its probability being zero must sum to one,
 since the probability of all possible outcomes of an event must sum to one by definition.
+}
 
 The classifier is proven linear by computing the decision boundary --- $P(0|x) = P(1|x)$ ---,
 passing to the logarithm (equivalent equation, since the logarithm's input is positive by definition, given that it is a probability)
@@ -59,7 +61,8 @@ $y_i$ and $(1-y_i)$ coefficients are just a trick to select
 they right log probability exploiting the class $y_i \in {0,1}$ of the $i$-th datapoint.
 
 For simplicity, we will omit the bias $b$ from the formulation;
-note that the bias can be reintroduced implicitly by passing to a homogenous transformation $w^T x_i$.   
+note that the bias can be reintroduced implicitly by passing to a homogenous transformation $w^T x_i$.
+
 The log likelihood formula can be further developed:
 \begin{align}
 \mathcal{L}(w|D)\nonumber\\
@@ -69,7 +72,9 @@ The log likelihood formula can be further developed:
 &= \sum_{i=1}^N \{y_i w^T x_i - \log (1 + e^{w^T x_i})\} \label{eq:unrolled_likelihood}
 \end{align}
 
+\defbox{
 The log likelihood is also called \textbf{negative binary cross-entropy}.
+}
 
 We can define function $F(x_i, w) = \sigma(w^T x_i)$, where $\sigma(x) = \frac{1}{1 + e^-x} = \frac{e^x}{1 + e^x}$ is
 the logistic function. The logistic function is a sigmoid, i.e., a S-shaped function.
@@ -132,7 +137,7 @@ w_j = w_j - \alpha \frac{\partial{\mathcal{L}(w)}}{\partial{w}}
 The cost function used in gradient descent is called objective or loss function, and it is typically denoted with $L(\cdot)$ or $J(\cdot)$.
 
 This is the vanilla rule: \textbf{batch gradient descent}.
-Is called batch since we have to run the average $\frac{1}{N} \sum_{i=1}^N [\dots]$ through all $N$ training examples.
+It is called batch since we have to run the average $\frac{1}{N} \sum_{i=1}^N [\dots]$ through all $N$ training examples.
 Several optimizers are built on top of it to speed up convergence.
 
 A different strategy is \textbf{minibatch stochastic gradient descent}.
