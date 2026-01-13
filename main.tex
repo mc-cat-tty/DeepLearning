@@ -20,7 +20,13 @@
 \usepackage{subfiles}
 \usepackage{tcolorbox}
 \usepackage{cleveref}
+\usepackage{listings}
+
 \tcbuselibrary{theorems}
+\lstset{
+  basicstyle=\ttfamily,
+  mathescape
+}
 
 % Separator
 \newcommand{\separator}[1]{
@@ -91,7 +97,7 @@
 \separator{Theory}
 \input{theory/1-introduction.tex}
 \input{theory/2-refresher.tex}
-% \input{theory/3-mlp.tex}
+\input{theory/3-mlp.tex}
 
 \separator{Laboratory}
 \input{labs/1-pytorch-intro.tex}
