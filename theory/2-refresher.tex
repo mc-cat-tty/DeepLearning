@@ -165,7 +165,7 @@ It combines momentum with an \textbf{adaptive learning rate} to slow down descen
 ADAM update rules. $g_t$ denotes the gradient of the loss function w.r.t the vector of weights:
 \begin{itemize}
 \item \textbf{First moment}: the moving of the average of the gradient is $m_t = \beta_1 m_{t-1} + (1 - \beta1) g_t$. $\beta_1$ is the weight given to past observations.
-\item \textbf{Second moment}: the "variance" of the gradient is $v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2$. $\beta_2$ is the weight given to past observations.
+\item \textbf{Second moment}: the ``variance'' of the gradient is $v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2$. $\beta_2$ is the weight given to past observations.
 \item \textbf{Bias correction} for $m_t$: $\hat m_t = \frac{m_t}{1-\beta_1^t}$. Remember that the weighting coeff, $\beta_1$, is below one, converging to zero when raised to infinity.
 \item \textbf{Bias correction} for $v_t$: $\hat v_t = \frac{v_t}{1-\beta_2^t}$. Remember that the weighting coeff, $\beta_2$, is below one, converging to zero when raised to infinity.
 \end{itemize}

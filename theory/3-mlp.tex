@@ -28,7 +28,7 @@ If the function is trained properly, given an example $x_{\text{test}}$, the sco
 than the scores of the other classes.
 
 If we add a non-linearity to the function $f$ we obtain the formula of the \textbf{Logistic Regression}, $f(x_i, W, b) = \sigma (W x_i + b)$, whose results
-are discussed in the previous section. We can still train the "model" using a binary cross-entropy loss:
+are discussed in the previous section. We can still train the ``model'' using a binary cross-entropy loss:
 $$
 \mathcal{L}(W, b) = - \frac{1}{m} \sum_{i=1}^m [y_i \log(\sigma (W x_i + b)) + (1 - y_i) \log(1 - \sigma (W x_i + b))]
 $$
