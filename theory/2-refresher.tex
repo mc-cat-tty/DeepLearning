@@ -56,7 +56,13 @@ No closed formula exists to solve it. A numerical optimization method is require
 Slide 8: beware, the probabilities have been swapped.
 
 In the binary case, the conditional log likelihood becomes:
-$$\mathcal{L}(\theta|D) = \sum_{i=1}^N [y_i \log P(y=1|x) + (1-y_i) \log P(y=0|x)]$$
+$$
+\mathcal{L}(\theta|D) =
+\sum_{i=1}^N [
+  \underbrace{y_i \log P(y=1|x)}_{\text{active if } y_i=1} +
+  \underbrace{(1-y_i) \log P(y=0|x)}_{\text{active if } y_i=0}
+]
+$$
 $y_i$ and $(1-y_i)$ coefficients are just a trick to select
 they right log probability exploiting the class $y_i \in {0,1}$ of the $i$-th datapoint.
 

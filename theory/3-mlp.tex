@@ -27,10 +27,10 @@ We can define a linear function $f(x_i, W, b) = W x_i + b$ whose parameters $W$ 
 If the function is trained properly, given an example $x_{\text{test}}$, the score of the correct class is higher
 than the scores of the other classes.
 
-If we add a non-linearity to the function $f(x_i, W, b) = \sigma (W x_i + b)$ (\textbf{Logistic Regression}) we obtain the results of the previous
-section. We can still train the "model" using a binary cross-entropy loss:
+If we add a non-linearity to the function $f$ we obtain the formula of the \textbf{Logistic Regression}, $f(x_i, W, b) = \sigma (W x_i + b)$, whose results
+are discussed in the previous section. We can still train the "model" using a binary cross-entropy loss:
 $$
-L(W, b) = - \frac{1}{m} \sum_{i=1}^m [y_i \log(\sigma (W x_i + b)) + (1 - y_i) \log(1 - \sigma (W x_i + b))]
+\mathcal{L}(W, b) = - \frac{1}{m} \sum_{i=1}^m [y_i \log(\sigma (W x_i + b)) + (1 - y_i) \log(1 - \sigma (W x_i + b))]
 $$
 
 \textbf{Softmax Classifier} generalizes Logistic Regression classifier to the multinomial (multi-class) case.
@@ -121,7 +121,9 @@ parameters that minimize the loss.
 The loss function measures the quality of network's mapping input->output.
 The loss function $L$ is composed of two addends: \textbf{data term} and \textbf{regularization term} (or penalization term).
 $$
-L(\theta; D) = \frac{1}{N} \sum_{i=0}^N L_i(\theta; D) + \lambda \Omega(\theta)
+L(\theta; D) = \frac{1}{N} \sum_{i=0}^N
+\underbrace{\mathcal{L}_i(\theta; D)}_\text{data term} +
+\underbrace{\lambda \Omega(\theta)}_\text{regularization term}
 $$
 
 The loss is parametrized on the network parameters and the dataset $D$, made up of $N$ pairs sample-label.
@@ -143,24 +145,24 @@ The \textbf{data loss function} depends on the task:
 \begin{itemize}
  \item \textbf{Classification} ($K$ classes):
  \begin{itemize}
-   \item \textbf{Hinge loss}: $\hat f = f(x_i) \in \mathbb{R}^K, \ L_i = \sum_{j \neq y_i} \max(0, \hat f_j - \hat f_{y_i} + 1)$.
+   \item \textbf{Hinge loss}: $\hat f = f(x_i) \in \mathbb{R}^K, \ \mathcal{L}_i = \sum_{j \neq y_i} \max(0, \hat f_j - \hat f_{y_i} + 1)$.
    For each class $j$, different from the reference class $y_i$\dots we sum the difference between the score corresponding
    to the $j$-th class and the score for the reference class, ensuring it is non-negative with the $\max$ operator.
    The idea is to make sure that the score for the reference class is higher than the scores for the other classes by some margin.
-   \item \textbf{Softmax loss}: $\hat f = f(x_i) \in \mathbb{R}^K, \  L_i = - \log (\frac{e^{\hat  f_{y_i}}}{\sum_j e^{\hat f_j}})$.
+   \item \textbf{Softmax loss}: $\hat f = f(x_i) \in \mathbb{R}^K, \  \mathcal{L}_i = - \log (\frac{e^{\hat  f_{y_i}}}{\sum_j e^{\hat f_j}})$.
    It computes the negative logarithm of the normalized confidence score, returned by the network $f(x)$, corresponding to the reference class.
  \end{itemize}
 
  \item \textbf{Regression}:
  \begin{itemize}
-   \item \textbf{Mean Squared Error (MSE)}: $L_i = \| \hat f - y_i \|_2^2$.
+   \item \textbf{Mean Squared Error (MSE)}: $\mathcal{L}_i = \| \hat f - y_i \|_2^2$.
    Asks to minimize the difference between the reference value and the value returned by the neural network.
  \end{itemize}
 \end{itemize}
 
 We want to learn the set of parameters which minimize the objective function:
 $$
-\theta^* = \arg \min_\theta \left[ L(\theta; D) \right] = \arg \min_\theta \left[ \frac{1}{N} \sum_{i=0}^{N-1} L_i(\theta; D) + \lambda \Omega(\theta) \right]
+\theta^* = \arg \min_\theta \left[ L(\theta; D) \right] = \arg \min_\theta \left[ \frac{1}{N} \sum_{i=0}^{N-1} \mathcal{L}_i(\theta; D) + \lambda \Omega(\theta) \right]
 $$
 
 As in linear regression, we want to compute the gradients of the loss function w.r.t.\ to its parameters, so that we can adjust them to lower the loss.
