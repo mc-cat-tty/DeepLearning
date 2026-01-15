@@ -1,100 +1,217 @@
 \section{Convolutional Neural Networks}
 \subsection{Intuition}
-What if inputs are images? not convenient to unroll images and feed them to a MLP. Two problems:
-- waste of inputs. E.g., a 32x32 RGB image is 3072 weights and inputs. Furthermore, pixel in images are often correlated.
-- MLP are not invariant to position of the feature. E.g., if we want to recognize faces with a MLP we should apply a translation to
-augment the dataset and move them in different input areas.
+\textbf{Convolutional Neural Networks} (CNNs) build upon the principles of MLPs:
+\begin{itemize}
+  \item They are composed of neurons with learnable weights
+  \item Neurons compute a dot product and pass the result to an activation function
+  \item The network stacks several layers that represent a differentiable function (needed for backprop)
+\end{itemize}
+
+What if inputs are images?\\
+It is not convenient to unroll images and feed them to a MLP. Two main problems:
+\begin{itemize}
+  \item \textbf{Params explosion}: for instance, a 32x32 RGB (3 channels) image implies 3072 input features;
+  if connected to a 512-neuron hidden layer, the number of weights would be 1.5 million.
+  Furthermore, pixels are often correlated, so we would lose the spatial locality of the image's pixels.
+  \item \textbf{Loss of spatial information}: MLPs are not invariant to the position of a feature:
+  if we wanted to recognize faces with a MLP, we would have to apply
+  several translations to augment the dataset, training the network with the face placed in different input areas.
+\end{itemize}
 
 CNNs work well with images by design. They take inspiration from our visual cortex.
-Images are processed in stages. First stages extract features (based on colo) from the input.
+In this architecture, images are processed in stages:
+the first stages extract fine features (e.g., edges), central layers extract coarsers features (e.g., shapes),
+and the last layers extract high level features (such as objects).
+This process allows CNNs to learn \textbf{spatial hierarchies} of features.
 
-\subsection{Building Blocks}
-convolutinal layers
-activation blocks
-pooling layers
+\obsbox{
+  Neurons respond to stimuli in a small, localized region of the visual field, named \textbf{receptive field}.s
+}
 
 \subsection{Architecture}
-Contrary to MLP, where to increase capacity network we increase the number of neurons, to increase CNN capacity we increase the number
-of channels.
+CNN building blocks are:
+\begin{itemize}
+  \item \textbf{Convolutional Layers}
+  \item \textbf{Activation Functions}
+  \item \textbf{Pooling Layers}
+\end{itemize}
 
-Activation maps - Pooling interleaved
-First, dimensionality is augmented, then shrunk.
+These blocks are stacked on top of the other; convolution has learnable parameters,
+while pooling and activation do not. Each block work on a 3D volume, made up of stacked \textbf{feature maps} (also
+called \textbf{activation maps}), rather than on a ``flat'' surface.
+The depth of the volume is defined by the number of channels; for instance, a RGB image has 3 channels.
+The final feature maps are flattened and usually fed to a MLP, called \textbf{head}.
 
-Each convolution layer applies a convolution matrix, or kernel, over the input to obtain the output.
-Remember: convolution is the sum of values obtained from the element-wise product of kernel and portion of image corresponding to
-the kernel. The obtained value is put on the central element of the kernel. TODO formula
-Basically, the formula is the same as in MLPs, however kernel convolution makes the process locally connected, meaning that each pixel
-influences only a local portion of the output. The small region each neuron sees of the previous layer is its receptive field.
-The kernel inherently reduces the size of the output.
-The stride of the kernel corresponds to the step by which the kernel is moved over the input.
+Contrary to MLP, where we needed to increase the number of neurons to increase the capacity of the network,
+to increase CNN's capacity we increase the number of channels.
 
-How do we deal with the fact that color images are tensors (three colors)? kernels are not 2D matrices, actually, they have a hidden 
-dimension (the depth) that depends on the number of channels in the image.
+The Activation + Pooling layers are interleaved with the Convolutional ones.
+In a tipical CNN network, the dimensionality is first expanded (increasing, for instance, the number of channels),
+then compressed.
 
-\subsection{Hyperparameters}
-- number of filters $C_{out}$: the depth of the output volume
-- kernel size $(KxK)$: the larger the kernel, the more abstract the learnable pattern
-- stride $S$: the number of pixels the kernel shifts across the input
+\textbf{Convolution} is the fundamental principle behind CNNs.
+Each convolutional layer applies a convolution matrix, or kernel, over the input to get the output.\\
+Remember: convolution is the sum of values obtained from the element-wise product of the kernel and the portion of the image
+on which the kernel is applied.
+The resulting value is stored on the output element corresponding to the central element the kernel.
+Formally, let $f$ be the input matrix, and $g$ the output one. 2D convolution computes:
+$$
+\text{given the coordinates} (x, y) \quad g_{x,y} = \omega * f_{x,y} = \sum_i \sum_j \omega_{i,j} f_{x-i,y-j}
+$$
 
-Since applying a kernel implies loosing part of the outer 'frame', we may want to add some padding to preserve input size.
+3D convolution relies on the same formula, but has an additional dimension.
 
+At its core, the formula is the same as in MLPs (a weighted sum of inputs), however kernel convolution is a
+locally connected process, meaning that each pixel influences only a local portion of the output. 
+The small region each neuron sees from the previous layer is its \textbf{receptive field}.
+The kernel inherently reduces the size of the output, if padding is not applied.
+
+If a kernel is useful to detect a feature on a specific area of a image, it is probably useful to detect the same
+feature at other locations (making the feature recognition \textbf{translation invariant}).
+This is why all the neurons within the same depth slice share the same set of weights and bias; this \textbf{parameter
+sharing} allows the forward pass of a CNN to be implemented with the convolution operator.
+
+So\dots during the forward pass: each filter is convolved with the input volume, producing a 2D feature (or activation)
+map, then the output volume is created by stacking the feature maps together.
+
+How do we deal with the fact that color images are tensors (three colors)?\\
+Kernels are not 2D matrices, actually, they have a hidden dimension (the depth) that depends on the number of channels in the image.
+
+Convolutional layers are parametrized on some parameters and some hyperparameters.
+The \textbf{learnable} params of this kind of layer are the \textbf{weights} of the kernel;
+the \textbf{number of filters} ($C_\text{out}$), the \textbf{stride} ($S$), and the \textbf{kernel size} ($K \times K$) are \textbf{hyperparams}.
+
+Kernel hyperparameters:
+\begin{itemize}
+ \item \textbf{Number of filters} ($C_\text{out}$): defines the depth of the output volume, which corresponds to the number of output feature maps.
+ \item \textbf{Kernel size} ($K \times K \times C_\text{in}$): the larger the kernel, the more abstract the learnable pattern; usually square size.
+ The input channels are equal to the $C_\text{out}$ of the previous layer.
+ \item \textbf{Stride} ($S$): the number of pixels the kernel shifts across the input at each step. The larger the stride, the smaller the output.
+\end{itemize}
+
+The total number of learnable parameters (capacity) per convolutional layer is:
+$$
+\text{\# learnable params} =
+\underbrace{K \times K \times C_{in}}_\text{size of 1 filter} \quad \times
+\underbrace{C_{out}}_\text{number of filters} + \quad
+\underbrace{C_{out}}_\text{bias terms}
+$$
+
+Since applying a kernel implies losing part of the outer ``frame'', we may want to add some padding to the input to preserve input size:
+this is another hyperparam called \textbf{Spatial Padding}.\\
 Problem: the network can be manipulated with the edge pixels if black padding is added.
 Advisable to use the input image mirrored or replicated.
 
-\subsection{Capacity}
-Learnable parameters are (KxKxCin)Cout + Cout
+\subsection{Activation Functions}
+Activation functions are needed to introduce non-linearity into the network and avoid its collapse on one linear layer.
+As we have seen in the previous section, several different activation functions exist; one of the most popular
+ones being ReLU, thanks to quicker SGD convergence and computational efficiency (just a threshold), compared to
+the more complex Tanh and Sigmoid.
 
-Activation functions are need to introduce non linearity and avoid network collapse on one layer.
-Activation blocks are applied element-wise.
+Activation layers apply the activation function element-wise on the input volume.
 
 \subsection{Pooling}
-Pooling layers perform a downsample of the input. The pooling operator can be min, max, average, etc.
+Pooling layers perform a spatial downsample of the input;
+pooling is usually applied independently on each depth slice of the input.
+The \textbf{pooling operator} can be min/max/average/etc value within the pooling windows.
 
 Average doesn't make much sense since we would take average of values outputted by the activation function.
 
-Hyperparams are pool size and pool stride.
+The hyperparams of pooling are:
+\begin{itemize}
+  \item \textbf{Pool size} ($K$): the dimension of the pooling window.
+  \item \textbf{Pool stride} ($S$): the number of pixels the pooling window shifts across the input.
+  If $S=K$ the windows are non-overlapping.
+\end{itemize}
 
-Pros: prevents overfitting, since a function like max chooses a different pixel each time, increases the receptive field of following layers, and reduces memory footprint.
+The most common configuration is $S=2 \quad K=2$.
+
+Pros: prevents overfitting (since a function like max chooses a different pixel each time), increases the receptive field of following
+layers, and reduces memory footprint.
 
 \subsection{Real-world applications}
-LeNet by LeCun is the first CNN with 1 depth channel and sigmoid activation function. The output was fed to MLP to recognize handwritten digits from MNIST.
+\textbf{LeNet} by \textbf{LeCun} is the first CNN with: $5 \times 5$ convolutive kernels, average pooling ($K=2,\ S=2$), and sigmoid activation function.
+The output was fed to MLP to recognize handwritten digits from the MNIST dataset.
 
-AlexNet won the ImageNet Large Scale Visual Recognition Challenge. First CNN that used ReLU. Able to recognize 1000 classes.
+\textbf{AlexNet} won the ImageNet Large Scale Visual Recognition Challenge.
+Characteristics: $11 \times 11$ kernel in 1st conv.\ layer, 5 conv.\ layers plus 3 fully connected.
+First CNN that adopted ReLU activation. Able to recognize 1000 classes.
 
-VGG16 by Oxford University. Beyond a certain number of layers, the vanishing gradient phenomenon appears. The problem is caused by
-the fact that the backpropagation moves the gradient towards the inputs.
+\textbf{VGG16} by Oxford University (Visual Geometry Group). Won 1st and 2nd place in ImageNet 2014 localization and classification challenge.
+Characteristics: $3 \times 3$ conv.\ kernels, $2 \times 2$ max pooling, 3 fully connected layers at the end.
 
-\subsection{Residual Network}
-Have you ever asked yourself if we can increase VGG layers from 16 to 100?
-Yes, we can, but we would have diminishing returns. The last layers would become more and more near to identity transformation.
-The result is that a 16 layers network would perform worse than a 100 layers network... a bit counterintuitive since the more the layers the higher the network capacity.
+VGG limits?\\
+Beyond a certain number of layers, the \textbf{vanishing gradient} phenomenon appears: stacking more layers in the CNN leads to peformance
+degradation, instead of improvement.
 
-Residual networks use a mechanism to give the network the opportunity to skip some layers.
-"Residual mechanism" is a common design pattern to allow learnable layers skip through shortcut connections.
+\defbox{
+\textbf{Vanishing gradient}: this is caused by the fact that backpropagation moves the gradient towards the inputs; in deeper models, the
+gradient received by the inital layers, could be extremely small, hence having a minimal influence on weights update.\\
+\textbf{Exploding gradient}: as above, but this time the gradient is amplified; the inital layers receive an extremely large gradient,
+causing instability in weights update.
+}
 
-TODO: diagram
+\subsection{ResNet}
+ResNet stands for \textbf{Residual Network}.
 
-How about gradient? Gradient can flow on both normal layers and the shortcut connection.
+Have you ever asked yourself if we can increase VGG layers from 16 to 100?\\
+Yes, we can, but we would have diminishing returns or even performance degradation.
+The last layers would become more and more near to identity transformation.
+The result is that a 16 layers network would perform worse than a 100 layers network\dots
+a bit counterintuitive since we would expect the more the layers, the higher the network capacity.
 
-To sum up, residual learning tries to solve the problem of gradient degradation on very deep networks.
+Residual networks use \textbf{residual mechanism} to give the network the opportunity to skip some layers.
+This mechanism is a common design pattern to allow \textbf{learnable layers skip} propagating the signal via \textbf{shortcut connections}.
 
+% TODO: diagram
 
-Mathematically, we transform layers from H_\theta(x) to F_\theta(x) + x, which is layer plus residual.
+How about gradient?\\
+Gradient can flow on both a normal layer and on the shortcut connection, these two signals are eventually added together.
 
-Sometimes, shortcuts feature a 1x1 learnable convolution that allows channel reduction. The problem is that we want to sum the output
-of a block of layers with its input. However, this can not always be possible due to different dimensions and channel sizes.
+To sum up, \textbf{residual learning} tries to solve the problem of gradient degradation on very deep networks.
+Mathematically, we transform layers from $H_\theta(x)$ to $F_\theta(x) + x$, meaning the layer plus the residual.
 
-TODO: diagram
+Sometimes, shortcut connections feature a $1 \times 1$ learnable convolution that allows channels reduction.
+The problem is that we want to sum the output of a layer with the input of the layer itself; this is subject to a mismatch between input
+and output channels.
+
+% TODO: diagram
 
 \subsection{Normalization Layers}
-Problem: Internal Covariant Shift
+Problem: Internal Covariant Shift.
 
-For mini-batch activations x for a layer we normalize the layer making it zero mean and unit variance:
- 1. compute mean and variance. TODO formula
- 2. normalization. TODO formula
- 3. learnable scale and shift. TODO formula and why
+\defbox{
+  \textbf{Internal Covariate Shift}: as the network \textit{trains}, the layers' weights get updated, shifting the distribution of the
+  inputs of the following layers. In deep neural networks (like the kind of CNNs enabled by the residual mechanism), the input distribution
+  shift is amplified more and more as the signal propagates through the network.
+}
 
-Problem: we cannot always compute mean and variance during inference phase, we could have just one example and not being able to compute it.
-Solution: we use the mean and variance computed during training, updated with a moving average of the mini batches.
+Internal Covariate Shift slows down training, since a layer's input is affected by the parameters of the preceding layers, forcing it to
+adapt to the new input distribution. The solution is \textbf{Batch Normalization}: the idea is to normalize the inputs of a layer for each
+mini-batch.
 
-The network behaves differently in learning and inference mode (like for dropouts in MLPs). This is the reason behind n.train() and n.eval() methods.
+During \textit{training}.\\
+For a mini-batch of activations $x$ for a given layer, we normalize the layer making it zero-mean and unit-variance:
+\begin{enumerate}
+  \item Compute mean and variance: $\mu_\mathcal{B} = \frac{1}{m} \sum_{i=1}^m x_i \quad \sigma_\mathcal{B}^2 = \frac{1}{m} \sum_{i=1}^m (x_i - \mu_\mathcal{B})^2$
+  \item Normalize each input: $\hat x_i = \frac{x_i - \mu_\mathcal{B}}{\sqrt{\sigma_\mathcal{B}^2 + \epsilon}}$
+  \item learnable scale $\gamma$ and shift $\beta$: $y_i = \gamma \hat x_i + \beta$
+\end{enumerate}
+
+Why learnable scale and shift?\\\
+After normalization the activations have a mean of 0 and variance of 1, and this might be too restrictive for the network to properly learn.
+$\gamma$ and $\beta$ are parameters, learnable during training, that give the network the chance to undo normalization if not beneficial.
+
+During \textit{inference}.\\
+Problem: we cannot always compute mean and variance during inference phase, we could have just one input example,
+instead of a mini-batch, and not being able to compute them.\\
+Solution: we use the mean and variance estimated during training (population statistics); since the mean and the variance of several
+mini-batches are computed, their aggregate value is updated with a moving average. 
+
+At inference time we perform:
+$$
+\hat x = \frac{x - \mu_\text{population}}{\sqrt{\sigma_\text{population}^2 + \epsilon}} \qquad y = \gamma \hat x + \beta
+$$
+
+The network behaves differently in learning and inference mode (like for dropouts in MLPs).
+This is the reason behind dinstinct \texttt{net.train()} and \texttt{n.eval()} methods.
