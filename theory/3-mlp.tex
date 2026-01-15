@@ -121,8 +121,8 @@ parameters that minimize the loss.
 The loss function measures the quality of network's mapping input->output.
 The loss function $L$ is composed of two addends: \textbf{data term} and \textbf{regularization term} (or penalization term).
 $$
-L(\theta; D) = \frac{1}{N} \sum_{i=0}^N
-\underbrace{\mathcal{L}_i(\theta; D)}_\text{data term} +
+L(\theta; D) =
+\underbrace{\frac{1}{N} \sum_{i=0}^N \mathcal{L}_i(\theta; D)}_\text{data term} \quad +
 \underbrace{\lambda \Omega(\theta)}_\text{regularization term}
 $$
 
