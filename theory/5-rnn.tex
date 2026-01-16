@@ -1,88 +1,169 @@
 \section{Recurrent Neural Networks}
 \subsection{Usage}
-In this lecture will analyze NNs for time-series, aka ordered sequence of observations.
+In this lecture we will study NNs for \textbf{time-series} analysis, a.k.a.\ an ordered sequence of observations.
 
-Def. A time series is a set of observations $\{x_t\}$ collected over time.
+\defbox{A time-series (TS) is a set of observations $\{ x_t \}_{t \in \tau}$ collected over time period $\tau$.}
 
-We will consider discrete and regularly sampled time series.
+We will consider discrete and regularly sampled time series, meaning that the time delta (sampling period) between data points is fixed, which
+also implies a fixed sampling frequency $f_c$.
 
 Most important features that can be extracted from a time series are:
- - trend: is the ts averagely increasing or decreasing?
- - seasonality: regular fluctationsfor each period of reference
- - cycle: periodic fluctuation around the trend
- - outliers: values out of distribution
- - stationariety: a ts is stationary if mean and variance do not change over time
+\begin{itemize}
+  \item \textbf{Trend}: if the TS is averagely increasing or decreasing.
+  \item \textbf{Seasonality}: regular fluctuations for a given period of reference.
+  \item \textbf{Cycle}: periodic fluctuation around the trend.
+  \item \textbf{Outliers}: out-of-distribution values w.r.t. the rest of the data.
+  \item \textbf{Stationariety}: a TS is stationary if statistics, such as mean and variance, do not change over time.
+\end{itemize}
 
-STL - Seasonality and Trend - decomposition splits data into Seasonality and Trend using Lossless regression.
-
-After STL decomposition we can put together again the trend and seasonality from our model and subtract it from original ts to get the residual.
+The \textbf{STL} decomposition divides the TS into Seasonality and Trend using the Loess regression.
+After STL decomposition we can put together again the trend and seasonality provided by our model and subtract it from the original
+TS to get the residual. The \textbf{residual} (basically \textbf{noise}) is made up of irregularities that cannot be decomposed.
 
 \subsection{Forecasting}
-Given a tau period of observation we want to predict the future values of the process.
+Given a period of observation $\tau$ we want to predict the future values of the process $\hat x_{\tau + h}, \ h > 0$.
+$h$ is called \textbf{forecast horizon}.
 
-Objective: Data generating process --> model --> real world evidence
-That matches as much as possible.
-Data generating process --> real world evidence
+Objective: approximate the \textbf{Data Generating Process} (DGP) with a \textbf{Model} as best as we can:\\
+\begin{verbatim}
+ DGP --------------> Real-world Evidence
+  |                           ^
+  |                           |
+  -------> Our Model ----------
+\end{verbatim}
 
-It boils down to accurately estimate the hidden parameters of the data generation process.
+We want a model that matches as much as possible the DGP, to improve forecasting precision;
+it boils down to accurately estimate the hidden parameters of the DGP.
 
-The foregasting models consider a limited window of observations in the form: TODO formula.
-Epsilon is white noise that can be sampled from a given distribution.
+Forecasting models typically consider a limited window of observations.
+Let $t$ be the current timepoint and $q$ be the window size,
+let $\phi$ and $\theta$ be the parameters of the model to be estimated;
+given $\{ x_t, \dots, x_{t-q} \}$ observations and $\{ \xi_t, \dots, \xi_{t-q}  \}$ white noise with mean 0 and finite variance
+(this noise can be sampled from a given distrubiton, such as a normal distribution with mean zero), our forecasting model prediction has the form:
+$$
+x_t = f(x_{t-1}, \dots, x_{t-q}; \phi) + g(\xi_{t-1}, \dots, \xi_{t-q}; \theta)
+$$
 
-\subsection{Approaches}
-Def. An autoregressive model of order p, denoted as AR(p), has an output that depends from p past samples.
-TODO formula
+\subsection{Classic Approaches}
+\defbox{
+  An \textbf{autoregressive model} of order $p$, denoted as AR($p$), is a forecasting model whose output depends on $p$ past samples.
+  Is defined as:
+  $$
+  x_t = \sum_{i=1}^p \phi_i x_{t-i} + \xi_t
+  $$
+  Where $\phi$ are the learnable parameters of the function, and $\xi$ is the white noise.
+}
 
-Def. A moving average model of order q, denoted as MA(q), is defined as: noise plus average plus previous variations
-TODO formula
+\defbox{
+  A \textbf{moving average model} of order $q$, denoted as MA($q$), is defined as:
+  $$
+  x_t = \mu + \xi_t + \sum_{i=1}^q \theta_i \xi_{t-i}
+  $$
+  Where $\mu$ is the empirical average of the process variable up to time $t$, $\theta$ are learnable params of the function, and $\xi$
+  are the \textbf{error terms} (or \textbf{shocks}) from previous predictions.
+}
+This model relies just on the structure of the error term to make a prediction at the current timepoint.
 
-\subsection{Basics}
-TS usually work in the time domain.
-Sometimes is useful to perform "data preparation" techinques: extract or separate time information, format and refine values.
-Other pre-processing techniques are Fourier (to pass to the frequency domain) and wavelet transforms.
+\subsection{Data Pre-processing}
+TS usually live in the time domain.
+Sometimes is useful to adopt ``data preparation'' techinques: extract or separate time information, format and refine values.
+Other pre-processing techniques are Fourier (pass to the frequency domain) and wavelet transforms.
 
-How to deal with different data types? strings must be converted to numerical values, periodic values should be preserved.
-Since NNs work better wehn they have inputs with zero average and costant variance, but periodic values such as months and days 
-span a different range of values (0-12, 0-31), it is preferable to pass them through sine or cosine functions to map them to unit values.
-Periodicity must be chosen depending on the tau.
+How to deal with different data types?\\
+String-formatted dates (e.g. \textit{2025-01-03}) must be converted to numerical values, like a timestamp,
+or split them into year/month/day for more efficient grouping.
 
-\subsection{RNNs}
-RNNs are a framework. They define a family of models that are not feedforward, meaning that their topology has some feedback outputs.
-The outputs are fed back into the model itself.
+Also, \textbf{periodicity} should be preserved, since NNs work better when their inputs are zero-mean and fixed variance.
+However, periodic values such as months (from 0 to 12 and then back to 0) days (0 to 31), and hours span a different range of values,
+it is then preferable to pass them through $\sin$ or $\cos$ functions to map them to the unit circle.
+$\tau$ must be chosen depending on the periodicity of the value; for instance:
+$$
+\text{hour\_sin} = \sin(\text{hour} \cdot \frac{2 \pi}{24}) \quad
+\text{hour\_cos}= \cos(\text{hour} \cdot \frac{2 \pi}{24})
+$$
+
+\obsbox{Both sine and cosine are needed to determine a point on the unit circle.}
+
+\subsection{RNN}
+RNNs are a framework: they define a family of models that are not just feedforward, like the ones we have seen so far,
+meaning that their topology has some feedback connections through which model outputs are fed back into the model itself.
+RNNs are \textbf{specialized in processing sequences}.
+
+Different types of RNN architectures exist; they can accept as input a single value or a sequence of values, the same holds
+for the output:
+one-to-one, one-to-many, many-to-one, and many-to-many.
 
 RNNs are composed of multiple recurrent cells.
 
-Vanilla RNN. TODO diagram. U maps inputs to the hidden state, W parametrizes hidden (or latent) state transition, V maps hidden state to output.
-Basically is compose of a linear model (MLP) that goes from input to h, from h to output, and from h_{t-1} to h_{t}.
-U, W and V are three set of learnable parameters.
+The \textbf{Vanilla RNN} is parametrized over three sets of learnable parameters:
+$U$ maps inputs to the hidden state, $W$ models hidden (or latent) state transition, and $V$ maps hidden state to output.
+Basically is a composition of three linear models (MLPs) that go from input $x$ to hidden state $h$, from $h$ to output $o$, and from $h^{(t-1)}$ to $h^{(t)}$.
 
-TODO dynamic model.
+% TODO diagram.
 
-The hidden state keeps memory of what happened in the past. TODO unrolled diagram.
+The system dynamics (update formulas) are:
+\begin{equation}
+  \begin{cases}
+    h^{(t)} = \phi(W h^{(t-1)} + U x^{(t)})\\
+    o^{(t)} = V h^{(t)}
+  \end{cases}
+\end{equation}
 
-h(t) = f(h(t-1), x(t), theta)
+The hidden state keeps memory of what happened in the past, a.k.a a compressed (lossy) state of the sequence of past inputs.
+The ``summary'' stored in the hidden state is necessarily lossy, since it maps an arbitrary length input $(x^{(1)}, \dots, x^{(t)})$
+to a fixed vector $h^{(t)}$.
 
-\subsection{Learning}
-Problem: hidden layer weights are shared between time points. We use backpropagation throught time (BTT).
+% TODO unrolled diagram.
 
-TODO: formula slide 17
+A recurrent architecture can be unfolded into a Direct Acyclic Graph (DAG), from a mathematical point of view:
+$h^{(t)} = f(h^{(t-1)}, x^{(t)}; \theta)$
 
-TODO: d h3 in d h0, delete ReLU (make assumption of being in linear part, which copies the function), result W to the pow of 3
+Where $\theta$ are learnable params, $h^{(t)}$ is the hidden state at time $t$ and $x^{(t)}$ the input at time $t$.
 
-Problem: if the parameters are below one, when elevated to some power, the gradient will approach zero.
+\subsection{Backpropagation}
+Notice that hidden layer weights are shared between time points, but we can still train the model through
+backpropagation unfolding the recurrent graph.
+Since the gradient conceptually flows back in time, we talk about \textbf{Backpropagation Through Time} (BTT).
+
+Computing BTT involves computing a huge number of derivatives. We want to update all the three weights matrices
+$V$, $W$, and $U$, taking into consideration that the backprop signal received by the $W$ and $U$ matrices depend
+not only on the current state, but also on the sequence of previous states.
+Mathematically, each timepoint gives a contribution to the update of both the matrices $W$ and $U$.
+The compact version of the gradients are:
+\begin{align*}
+  \frac{\partial{L}}{\partial{V}} &= \frac{\partial{L}}{\partial{o}} \frac{\partial{o}}{\partial{V}}\\
+  \frac{\partial{L}}{\partial{W}} &= \frac{\partial{L}}{\partial{o}} \frac{\partial{o}}{\partial{h^{(3)}}} \left[ \sum_{k=1}^3 \left( \frac{\partial{h^{(3)}}}{\partial{h^{(k)}}} \frac{\partial{h^{(k)}}}{\partial{W}} \right) \right]\\
+  \frac{\partial{L}}{\partial{U}} &= \frac{\partial{L}}{\partial{o}} \frac{\partial{o}}{\partial{h^{(3)}}} \left[ \sum_{k=1}^3 \left( \frac{\partial{h^{(3)}}}{\partial{h^{(k)}}} \frac{\partial{h^{(k)}}}{\partial{U}} \right) \right]\\
+\end{align*}
+
+Square brackets contain contributions of all timepoints to dL/dW and dL/dU.
+
+\obsbox{
+  $\frac{\partial{L}}{\partial{V}}$ depends only on current state; while $\frac{\partial{L}}{\partial{W}}$ and $\frac{\partial{L}}{\partial{U}}$ depend on all previous states.
+}
+
+Clearly, the expanded version of these formulas take also into account that
+$\frac{\partial{h^{(t)}}}{\partial{h^{(k)}}}$ cannot be always computed directly; it needs, in turn, to be expanded with the chain rule.
+For instance, $\frac{\partial{h^{(3)}}}{\partial{h^{(1)}}}$ becomes $\frac{\partial{h^{(3)}}}{\partial{h^{(2)}}} \frac{\partial{h^{(2)}}}{\partial{h^{(1)}}}$.
+
+
+Problem: if the magnitude of the parameters is below one, when elevated to some power, the gradient will approach zero.
 This is called vanishing gradient.
 If params are greater than one, when elevated to some power, the gradient will be amplified.
 This is called exploding gradient.
 
-This is typical numerical instability associated with the RNNs.
+% TODO: d h3 in d h0, delete ReLU (make assumption of being in linear part, which copies the function), result W to the pow of 3
 
-Long-term dependencies are the problem. We would like to check numbers and increase them if they are too low and decrease them if too high.
-But we cannot inject random values in recurrent cells...
 
-Gating (Gated Recurrent Unit --- GRU) is the first mitigation strategy: instead of passing them as they are, they are passed through a gating coefficient.
+% This is typical numerical instability associated with the RNNs.
 
-Long Short-Term Memory (LSTM) substitute h cell with TODO diagram.
-Each block is composed of forget, input and output gates. The sigmoid is applied element wise making them differentiable switches.
-They must be learnable to be differentiable.
+% Long-term dependencies are the problem. We would like to check numbers and increase them if they are too low and decrease them if too high.
+% But we cannot inject random values in recurrent cells...
 
-C matrix controls how many params of the computed 
+% Gating (Gated Recurrent Unit --- GRU) is the first mitigation strategy: instead of passing them as they are, they are passed through a gating coefficient.
+
+% Long Short-Term Memory (LSTM) substitute h cell with TODO diagram.
+% Each block is composed of forget, input and output gates. The sigmoid is applied element wise making them differentiable switches.
+% They must be learnable to be differentiable.
+
+% C matrix controls how many params of the computed 
