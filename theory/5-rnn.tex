@@ -25,12 +25,14 @@ Given a period of observation $\tau$ we want to predict the future values of the
 $h$ is called \textbf{forecast horizon}.
 
 Objective: approximate the \textbf{Data Generating Process} (DGP) with a \textbf{Model} as best as we can:\\
-\begin{verbatim}
+\begin{center}
+\begin{BVerbatim}
  DGP --------------> Real-world Evidence
   |                           ^
   |                           |
   -------> Our Model ----------
-\end{verbatim}
+\end{BVerbatim}
+\end{center}
 
 We want a model that matches as much as possible the DGP, to improve forecasting precision;
 it boils down to accurately estimate the hidden parameters of the DGP.
@@ -65,7 +67,7 @@ $$
 This model relies just on the structure of the error term to make a prediction at the current timepoint.
 
 \subsection{Data Pre-processing}
-TS usually live in the time domain.
+TSs usually live in the time domain.
 Sometimes is useful to adopt ``data preparation'' techinques: extract or separate time information, format and refine values.
 Other pre-processing techniques are Fourier (pass to the frequency domain) and wavelet transforms.
 
@@ -89,8 +91,8 @@ RNNs are a framework: they define a family of models that are not just feedforwa
 meaning that their topology has some feedback connections through which model outputs are fed back into the model itself.
 RNNs are \textbf{specialized in processing sequences}.
 
-Different types of RNN architectures exist; they can accept as input a single value or a sequence of values, the same holds
-for the output:
+Different types of RNN architectures exist; they can accept a single-valued input or a sequence of input values, and the same holds
+for the output, therefore 4 cardinality combinations exist:
 one-to-one, one-to-many, many-to-one, and many-to-many.
 
 RNNs are composed of multiple recurrent cells.
@@ -136,34 +138,93 @@ The compact version of the gradients are:
   \frac{\partial{L}}{\partial{U}} &= \frac{\partial{L}}{\partial{o}} \frac{\partial{o}}{\partial{h^{(3)}}} \left[ \sum_{k=1}^3 \left( \frac{\partial{h^{(3)}}}{\partial{h^{(k)}}} \frac{\partial{h^{(k)}}}{\partial{U}} \right) \right]\\
 \end{align*}
 
-Square brackets contain contributions of all timepoints to dL/dW and dL/dU.
+Square brackets contain contributions of all the timepoints to $\frac{\partial{L}}{\partial{W}}$ and $\frac{\partial{L}}{\partial{U}}$.
 
 \obsbox{
-  $\frac{\partial{L}}{\partial{V}}$ depends only on current state; while $\frac{\partial{L}}{\partial{W}}$ and $\frac{\partial{L}}{\partial{U}}$ depend on all previous states.
+  $\frac{\partial{L}}{\partial{V}}$ depends only on the current state; while $\frac{\partial{L}}{\partial{W}}$ and $\frac{\partial{L}}{\partial{U}}$ depend on all the previous states.
 }
 
-Clearly, the expanded version of these formulas take also into account that
+Clearly, the expanded versions of these formulas take also into account that
 $\frac{\partial{h^{(t)}}}{\partial{h^{(k)}}}$ cannot be always computed directly; it needs, in turn, to be expanded with the chain rule.
 For instance, $\frac{\partial{h^{(3)}}}{\partial{h^{(1)}}}$ becomes $\frac{\partial{h^{(3)}}}{\partial{h^{(2)}}} \frac{\partial{h^{(2)}}}{\partial{h^{(1)}}}$.
 
-
-Problem: if the magnitude of the parameters is below one, when elevated to some power, the gradient will approach zero.
-This is called vanishing gradient.
-If params are greater than one, when elevated to some power, the gradient will be amplified.
-This is called exploding gradient.
+\proofbox{
+As the time series progress, this chain of derivatives becomes longer and longer:
+\begin{enumerate}
+  \item let $h^{(t)} = W h^{(t-1)} + U x^{(t)}$ be the recurrence relation under the assumption that $\phi$ is linear
+  \item the derivative w.r.t.\ the previous timestep is $\frac{\partial h^{(t)}}{\partial h^{(t-1)}} = \frac{\partial (W h^{(t-1)} + U x^{(t)})}{\partial h^{(t-1)}} = W$
+  \item applying the chain rule to correlate the dependency between the (arbitrarily chosen) timestep 4 and timestep 1, we get $\frac{\partial h^{(4)}}{\partial h^{(1)}} = \frac{\partial h^{(4)}}{\partial h^{(3)}} \cdot \frac{\partial h^{(3)}}{\partial h^{(2)}} \cdot \frac{\partial h^{(2)}}{\partial h^{(1)}}$
+  \item which becomes $\frac{\partial h^{(4)}}{\partial h^{(1)}} = W^3$
+\end{enumerate}
+}
 
 % TODO: d h3 in d h0, delete ReLU (make assumption of being in linear part, which copies the function), result W to the pow of 3
 
+Problem: if the magnitude (measured with L1 or L2 norm) of the parameters is \textbf{below one}, when elevated to some power, the gradient will approach zero.
+This is called \textbf{vanishing gradient}.
+If params are \textbf{greater than one}, when elevated to some power, the gradient will be amplified.
+This is called \textbf{exploding gradient}.
 
-% This is typical numerical instability associated with the RNNs.
+Vanishing gradient is problematic, because contributions of older timesteps approach zero as the sequence progresses. The oppsite happens with exploding
+gradient: older timesteps contributions become bigger and bigger as the sequence progresses. This numerical instability is typically associated with the RNNs,
+and with deep NNs in general; in fact, even feedforward networks can suffer vanishing/exploding gradients, but in RNNs the problem is amplified by
+the fact that the network is as deep as the length of the input sequence.
 
-% Long-term dependencies are the problem. We would like to check numbers and increase them if they are too low and decrease them if too high.
-% But we cannot inject random values in recurrent cells...
+Long-term dependencies are the problem. We would like to check numbers and increase them if they are too low and decrease them if too high.
+But we cannot inject random values into recurrent cells\dots
 
-% Gating (Gated Recurrent Unit --- GRU) is the first mitigation strategy: instead of passing them as they are, they are passed through a gating coefficient.
+\subsection{LSTM}
+\textbf{Gating} is the first mitigation strategy: instead of overwriting the hidden state at each timestep, each element of the hidden state
+matrix is passed through a learnable gating coefficient. The gating coefficients control the information flow, dedicing whether to drop or keep
+any piece of information that determines the current state.
 
-% Long Short-Term Memory (LSTM) substitute h cell with TODO diagram.
-% Each block is composed of forget, input and output gates. The sigmoid is applied element wise making them differentiable switches.
-% They must be learnable to be differentiable.
+\textbf{Gated Recurrent Unit} (\textbf{GRU}) and \textbf{Long Short-Term Memory} (\textbf{LSTM}) architectures implement gating to mitigate
+the vanishing/exploding gradient problem and allow the network to learn long-term dependencies.
 
-% C matrix controls how many params of the computed 
+% TODO diagram.
+
+LSTM introduces the cell state $C$, which constitues the \textbf{long-term memory} of the model; which is added to the already existing hidden state $h$,
+which acts as the \textbf{short-term memory} of the model.
+LSTM substitutes the recurrent cell with the \textbf{LSTM Memory Cell}, which has as inputs the short-term hidden state $h^{(t-1)}$, the long-term cell state
+$C^{(t-1)}$, and the current input $x^{(t)}$, and as outputs the short-term hidden state $h^{(t)}$ and the long-term cell state $C^{(t)}$.
+
+This architecture is composed of three gates, working on the same dimension of the hidden space:
+\begin{itemize}
+  \item \textbf{forget gate}: $f = \phi(W_f h^{(t-1)} + U_f x^{(t)})$. Later multiplied with the previous cell state $C^{(t-1)}$, selects which and how much
+  information can be overwritten from $C^{(t-1)}$. The sigmoid squashes the values between 0 and 1, where 0 represents ``forget'' and 1 represents
+  ``keep''. This equation basically outputs a ``mask'' (not binary since real values between 0 and 1 are allowed).
+  \item \textbf{input gate}: $i = \phi(W_i h^{(t-1)} + U_i x^{(t)})$. Later multiplied with the ``mask'' $\tilde{C}$, the input gate controls how much of the
+  previous hidden state let through. Intuitively, it selects the important information that must be preserved from the input.
+  \item \textbf{output gate}: $o = \phi(W_o h^{(t-1)} + U_o x^{(t)})$. Similarly to the input, the output gate controls how much of the previous hidden state $h^{(t-1)}$ must be expose to the
+  next LSTM cell through the output $h_t$.
+\end{itemize}
+
+The above-mentioned $\tilde{C}$ has the following equation: $\tilde{C} = \tanh (W_C h^{(t-1)} + U_C x^{(t)})$
+Intuitively, it selects the \textit{candidate} information to be added to the masked $C^{(t-1)}$; the output is only
+a candidate since the gate $i$ has the power to remove further information from $h^{(t-1)}$.
+
+Lastly, the outputs are:
+\begin{itemize}
+  \item \textbf{current cell state}: $C^{(t)} = C^{(t-1)} \odot f + \tilde{C} \odot i$. The masked previous cell state is added to the masked input.
+  \item \textbf{current hidden state}: $h^{(t)} = \tanh (C^{(t)}) \odot o$. The amount of information exposed by the output hidden state is regulated by the output gate.
+\end{itemize}
+
+\obsbox{
+Each gate multiplied element-wise with other functions, acting as continous, differentiable switches (they must be differentiable to be learnable). 
+}
+
+This is a summary of the LSTM update equations:
+\begin{equation*}
+  \begin{cases}
+    f = \phi(W_f h^{(t-1)} + U_f x^{(t)})\\
+    i = \phi(W_i h^{(t-1)} + U_i x^{(t)})\\
+    o = \phi(W_o h^{(t-1)} + U_o x^{(t)})\\
+    \tilde{C} = \tanh (W_C h^{(t-1)} + U_C x^{(t)})\\
+    C^{(t)} = C^{(t-1)} \odot f + \tilde{C} \odot i\\
+    h^{(t)} = \tanh (C^{(t)}) \odot o
+  \end{cases}
+\end{equation*}
+
+\obsbox{
+  Remember that $\sigma$ outputs values from 0 to 1, while $\tanh$ values span form -1 to 1.
+}
