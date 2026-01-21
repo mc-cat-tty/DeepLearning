@@ -1,0 +1,221 @@
+\section{Transformer}
+\subsection{Temporal Convolution Networks}
+\defbox{A \textbf{sequence model} is a model that takes in input a sequence of items and outputs an item or another sequence of items.}
+
+\textbf{Seq-to-seq} models are used for tasks like machine translation, forecasting, audio generation, text summarization, etc.
+
+We are talking about models that operate on timeseries. Timeseries are sequential (hence ordered) numerical values.
+Each timestep has a value, or token, associated to it.
+Remember that sequential models always work with numbers (scalars, vectors, matricies, and tensors), for e.g., words are converted into embeddings.
+We have seen RNN, but other architectures able to outperform RNN exist.
+
+Can we apply convolution on sequential models? yes, with a 1D (\textbf{Conv1D}) kernel. 
+
+Convolution can be applied to time series, if we represent each token with a vector of fixed length.
+The kernel will be the number of features encoded by the vector by kernel length (i.e., the number of
+timepoints the kernel takes into consideration).
+
+Let $\omega$ be a convolutive kernel, let $k$ be its the size, let $f(t)$ be the value of the timeseries
+at time $t$, the discrete 1D convolution is defined by:
+$\omega * f(x) = \sum_{i=0}^{k-1} \omega(i) f(x-i)$.
+
+\obsbox{
+Convolution is moving backward in time, not forward.
+}
+
+Intuition: multiply features by learnable weights and sum them up. Obviously the kernel is moved only along the time axis.
+
+Problem: in images we assume that pixels near to each other have similar color values. In time series this is not always true, it
+depends on the sampling frequency and on the underlying problem; e.g., this doesn't hold for NLP.
+In order to capture relationships between distant timepoints, we need to increase the \textbf{receptive field} of
+the final layer, either making the network deeper or increasing the length of the kernel.
+
+We already coped with this problem, in CNNs for image analysis we increased the receptive field by increasing the number of layers.
+However, in sequence analysis we would need an extremely deep networks to achieve a long effective history size.
+We mitigate the problem using \textbf{dilation}, which basically consists of picking a token every $d$ instead of a continous sequence of tokens.
+
+The formula of \textbf{dilated convolution} is: $\omega * f(x) = \sum_{i=0}^{k-1} \omega(i) f(x-d \cdot i)$. Where $d$ is the dilation factor.
+
+Standard convolution can access future inputs when computing the output.
+This is undesirable in CNNs applied to time series, especially in prediction tasks.
+In that case, we want the model to look just at past values: \textbf{causal convolution} ensures that the output
+at time $t$ depends only on inputs from timesteps $\leq t$.
+This principle is called \textit{look-at-the-past} or \textit{autoregression}.
+
+In \textbf{Temporal Convolutional Network} (\textbf{TCN}) the model is composed of a residual bocks, each made up of two or more
+\textbf{dilated temporal convolutional} layers, with different dilation factors.
+Actually, each block is made up of two sequences of dilated temporal conv., weight normalization, activation, and optional dropout.
+As we approach network's output we increase dilation in order to make the output catch more and more input context.
+
+A finance case-study, in which a NN was asked to predict binary market movement over two consecutive timesteps (a.k.a price up or down),
+proved that TCNs outperform CNNs and LSTMs.
+The network was provided with an encoding of stock values (price vector) and event embeddings extracted from stock news.
+
+\subsection{TCN vs RNN}
+Remember that in principle, we introduced CNNs to have less params than MLPs.
+
+Advantages:
+\begin{itemize}
+ \item TCNs are also more stable than RNNs, since they don't suffer from vanishing and exploding gradient.
+ \item RNN cannot be parallelized, while CNN and RNN can be (convolution can be inherently parallelized) making them faster.
+ \item More control over memory footprint. Memory and receptive field depend on network depth.
+ \item Explainability modules can be plugged
+\end{itemize}
+
+Extra: see Grad Activation Maps.
+
+\subsection{Transformer}
+In TCN we model temporal dependencies are modeled with an \textbf{inductive bias}, since current values depend on past ones;
+this is good since it enforces \textbf{causality} and stability.
+However, there are cases in which output should depend on features \textbf{non-local in time} and on \textbf{long-range interactions}, such as in coding, in which
+the logic of a piece of code could depend all the previous variables.
+
+We therefore want a more flexible and general architecture: \textbf{Transformer}.
+
+Transformers are composed of an \textbf{encoder} and a \textbf{decoder}.
+The encoder is made up of \textbf{4 layers stacked} one after the other, and that can be repeated in block $N$ times,
+while the decoder block is composed of \textbf{6 stacked layers}, that can be repeated an arbitrary number of times.
+
+The role of the encoder is to output a numerical (vectorial) representation of the input tokens, given an input sequence;
+they compute the numerical representation by looking at the \textbf{context} of each token, taking into consideration
+both the left and the right context with a mechanism that takes the name of \textbf{bidirectional attention}.
+
+The decoder is more powerful and has the ability to generate new tokens given the left context, with the
+already discussed \textbf{autoregressive attention} mechanism.
+
+Since the encoder block can be concatenated $N$ times with other encoders, each block works with the same dimension of the input.
+Differently from the convolution, the input and output dimensions are the same, no dimensionality reduction is adopted.
+
+The buildling blocks of the encoder are the \textbf{Multi-Head Attention} and the \textbf{Feed Forward} layer (just a MLP with
+two linear layers and a ReLU activation in between); they both can be skipped with residual connections. 
+The \textbf{Add and Normalize} layer has an add, necessary to sum the residual branch
+to the normal branch, and a normalize layer, to stabilize and speed up training.
+
+\subsection{Layer normalization}
+We have already seen Batch Normalization\dots computing running statistics across a \textit{batch} to avoid ICS (Internal Covariate Shift).
+Instead, in \textbf{Layer Normalization} (Be et al., 2016) we normalize activations across the \textit{features} of each token.
+Each token in normalized subtracting the mean of the features and dividing by their standard deviation; the result is then scaled
+and shifted by learnable parameters.
+
+Let $\mu$ be the mean across the features, let $\sigma$ be the standard deviation across the features;
+let $\gamma$ and $\beta$ be learnable parameters, given an input token $x$:
+$$
+\text{LN}(x) = \frac{x - \mu}{\sigma + \epsilon} \odot \gamma + \beta
+$$
+
+\subsection{MHA}
+\textbf{Multi Head Attention} (\textbf{MHA}) is where the magic happens.
+MHA serves the purpose stated at the beginning: we want a dynamical receptive field that can shrink or grow autonomously.
+
+First off, MHA does not change the dimension of the input vector.
+Given $T$ input tokens, the same number of tokens $T$ is returned as output.
+
+\textbf{Attention} can be seen as a \textbf{Content-Based Memory Access} (a.k.a.\ an access to an \textbf{associative memory},
+like the one theorized by Hopfield). Attention allows the model to dynamically focus on what matters the most, conversely to
+CNNs, RNNs, etc., which process information uniformly.
+Mathematically, this corresponds to dynamically assigning weights to the input tokens, depending on their relevance to the
+context.
+This requires the model to work on the entire, uncompressed, input sequence (this is why the MHA block does not reduce input size).
+
+As a matter of fact, attention mechanism allows to directly query the entire input sequence to retrieve information on demand. 
+The model learns a series of key-value associations: it mantains ``memory slots'' identified by a key $k_i$ and containing a value $v_i$;
+it then generats a query vector $q$ that describes what it is looking for, then the similarity between the query and each key is computed, and the
+final information is retrieved as a weighted sum of the values:
+\begin{algorithm}
+  \caption{Content-Based Memory Access}
+  \begin{algorithmic}[1]
+    \State $H$ Hidden dimension
+    \State $q \leftarrow H \times 1$ query vector
+    \State $k_i \leftarrow H \times 1$ i-th key vector
+    \State $v_i \leftarrow H \times 1$ i-th value vector
+    \For{each $\{k_i, v_i\}$} \Comment{for each memory slot}
+      \State $s_i \leftarrow \text{similarity}(q, k_i)$
+    \EndFor
+    \State $\alpha \leftarrow \text{softmax}(s)$ \Comment{attention weights}
+    \State \Return $\sum_i \alpha_i v_i$ \Comment{retrieved information as weighted combination of the values}
+  \end{algorithmic}
+\end{algorithm}
+
+Clearly, we can rid of the for loop and the summation working with $K$ and $V$ in matrix form.
+
+During the training, we need to learn how to weigh the input tokens.
+The weight matrix (actually, matrices) is the only learnable parameter of the layer.
+Notice that the weigth matrix is not fixed, indeed it is a function of the query.
+
+In the \textbf{self-attention} mechanism, a specific variant of the more general attention mechanism, the query $Q$, the keys $K$, and
+the values $V$ are derived from the same input $X$ through linear projections. Let $d_{\text{tokens}}$ be the number of tokens,
+$d_{\text{model}}$ be the hidden dimension of the model, and $d_{k}$ be the hidden dimension of a single attention head:
+\begin{align*}
+&X \in \mathcal{R}^{d_{\text{tokens}} \times d_{\text{model}}} \qquad W_Q, W_K, W_V \in \mathcal{R}^{d_{\text{model}} \times d_{k}} \\ \\
+&\mathbf{Q = X \cdot W_Q \qquad K = X \cdot W_K \qquad V = X \cdot W_V} \\ \\
+&\rightarrow \quad Q, K, V \in \mathcal{R}^{d_{\text{model}} \times d_{k}}
+\end{align*}
+
+Extra: see Cross Attention
+
+The idea is now to compute the similarity between the query vectors (stored in matrix $Q$) and the key vectors (stored in $K$),
+multiplying each row of $Q$ by the respective row of $K$ (a sort of cosine similarity but not scale invariant, since we are
+just computing the dot product between the two).
+As a result, we obtain a similarity matrix that has on the diagional the similarity of each element with itself, and on the cell
+at row $i$ and col $j$, the similarity between $j$-th query and $i$-th key.
+The similarity scores are then scaled porportionally to $d_k$; we then pass the result to a softmax so that the items sum to one.
+Lastly, the similarity vectors are multiplied with the values:
+$$
+\text{Attention}(Q, K, V) = \text{softmax} \left( \frac{Q K^T}{\sqrt{d_k}} \right) V
+$$
+
+Problem: the output of the attention must be summed with the residual, dimension must be adjusted. How?
+
+Solution: concatenation + projection. Several attention heads are usually stacked together (hence the name \textbf{Multi Head Attention}).
+Each head outputs a matrix $d_{\text{tokens}} \times d_{k}$. The result of the concatenation is then projected with a linear layer to match
+the dimensionality of $d_{\text{model}}$.
+Given $Z_i = \text{Attention}(Q_i, K_i, V_i)$ output of the $i$-th attention head, given $h$ number of attention heads in MHA block, and $W_O$
+weights of output (last) projection layer:
+$$
+\text{MHA}(Q, K, V) = \text{concat} \left( Z_1, \dots , Z_h \right) W_O
+$$
+
+As output, we get the same number of tokens given as input. This is not good for \textbf{classification}. Two common strategies are:
+\begin{itemize}
+ \item \textbf{Average pooling}: take the \textbf{average} of all the embeddings and fed it to a MLP classifier.
+ \item \textbf{[CLS] token}: introduce a fake input token, called \textit{classification token}, and prepend it to the input sequence.
+ Its output counterpart is used as the class, all the rest is thrown away. This works since the CLS token is contextualized over all the
+ other input tokens.
+\end{itemize}
+
+What about training? all the operations seen so far are linear, therefore differentiable.
+
+\subsection{Loss function for regresssion}
+\textbf{Mean Squared Error} (\textbf{MSE}): $\mathcal{L}_{\text{MSE}} = \frac{1}{N} \sum_{i=1}^{N} (y_i - \hat{y}_i)^2$\\
+The square lowers a lot small values, indeed, this MSE penalizes large errors strongly (sensitive to outliers). It is a smooth and differentiable function.
+
+Sometimes, \textbf{Mean Absolute Erorr} (\textbf{MAE}) is used: $\mathcal{L}_{\text{MAE}} = \frac{1}{N} \sum_{i=1}^{N} |y_i - \hat{y}_i|$\\
+MAE is more robust to outliers (no square that amplifies their error term), but less smooth, which makes optimization harder.
+
+\textbf{Binning} in an alternative approach to regression, that aims at turning the regression problem into a classification problem.
+This ``hack'' discretizes the target range into intervals called \textit{bins}. We can then solve a classification problem.
+As a result, we obtain a regressor that works on a discrete set of values instead of a continous range.
+
+
+Why binning?\\
+With binning, we can use cross-entropy loss, plus we can capture the uncertainty of the model via the predicted probability distribution across bins
+(see section about \textbf{Uncertainty}). Also remember that classification is always easier than regression.
+
+Remember: both MAE and MSE equally penalize overestimated and underestimated values \textbf{symmetrically}.
+
+In real world problems, underestimating can be worse than overestimating. E.g., risks should be overestimated, like energy demand, stock prices, etc.
+
+In these cases \textbf{Quantile Loss} is used. Let $\hat y$ be the predicted value and $y$ the target:
+$$
+\mathcal{L}_\tau(y_i, \hat{y}_i) = \begin{cases}
+    \tau (y_i - \hat{y}_i) & \text{if } y_i \geq \hat{y_i} \\
+    (1 - \tau) (\hat{y}_i - y_i) & \text{if } y_i < \hat{y_i}
+  \end{cases}
+$$
+
+$\tau$ is an hyperparameter, and, depending on its value, we can decide to penalize more over- or under- estimation:
+\begin{itemize}
+  \item if $\tau = 0.5$ the formula collapses to the MAE
+  \item if $\tau > 0.5$ we encourage \textit{overestimation}, since the coefficient $(1 - \tau)$, associated to the branch $y_i < \hat{y_i}$, gets smaller than $0.5$
+  \item if $\tau < 0.5$ we encourage \textit{underestimation}, since the loss associated to the branch $y_i \geq \hat{y_i}$, is penalized less than the other branch
+\end{itemize}

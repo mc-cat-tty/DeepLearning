@@ -22,7 +22,12 @@
 \usepackage{cleveref}
 \usepackage{listings}
 \usepackage{fancyvrb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 
+\newcommand{\Var}[1]{\mathbf{#1}}
+\newcommand{\CommentColor}[1]{\textcolor{teal}{#1}}
+\renewcommand{\algorithmiccomment}[1]{\hfill \CommentColor{$\triangleright$ #1}}
 
 \tcbuselibrary{theorems}
 \lstset{
@@ -103,6 +108,7 @@
 \input{theory/3-mlp.tex}
 \input{theory/4-cnn.tex}
 \input{theory/5-rnn.tex}
+\input{theory/6-transformer.tex}
 
 \separator{Laboratory}
 \input{labs/1-pytorch-intro.tex}
