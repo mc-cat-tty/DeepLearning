@@ -1,0 +1,197 @@
+\section{Graph Neural Network}
+\subsection{New viewpoint}
+CNNs usually operate on 2D matrices, typically images. We can view images as \textbf{discrete 2D lattices}
+(``\textit{reticolo}'' in italian). Lattices are regular structures with strong locality.
+In the same way, we can view timeseries as \textbf{1D Euclidean lattices}.
+
+Under this perspective, CNNs, through the convolution operation, cross-correlate pixels that belong
+to the same ``neighborhood'' sliding a patch over the grid, and visiting each location systemtically.
+On the contrary, Transfomers do not exploit locality, attention goes beyond it; the relationships between
+input elements are discovered by the network itself at any distance.
+
+What is a graph?
+\defbox{
+A \textbf{graph} is a set of vertices $V$ and edges $E$, in which each edge is a pair of vertices
+$E_i = (V_j, V_k$). The graph $G$ is then defined as $G = (V, E)$; can be weighted or unweighted,
+directed or undirected. Go review first year's notes.
+}
+
+\defbox{
+  A \textbf{lattice graph} is a graph whose nodes are arranged on a regular grid within a Euclidean space.
+}
+
+Under the new perspective, an image can be viewed as a signal lying on a lattice graph: each node is
+visualized as a pixel and represented as a feature vector; each node is connected with its 4 neighbors.
+
+Traditional convolutional architectures assume the input data are defined on a regular Euclidean grid,
+but this is not always the case, such as in molecule modeling, social networks' interactions, street
+networks, knowledge graphs, and body pose are examples.
+
+\subsection{Graph Convolutional Network}
+Objective: define a NN that can handle \textbf{graph-structured data}, even if the graph is \textbf{not
+regular}.
+
+The graphs we want to work on have the following properties:
+\begin{itemize}
+  \item \textbf{Irregular structure}: nodes with arbitrary number of neighbors, which implies a variable
+  receptive field.
+  \item \textbf{No spatial locality}: no inherent notion of distance or order.
+  \item \textbf{Permutation invariant}: output should not depend on the processing order.
+  \item \textbf{No global coordinate system}: no fixed layout or orientation.
+  \item \textbf{Dynamic topology}: topology may evolve over time or depend on nodes' features.
+\end{itemize}
+
+GCNs were invented by Kipf and Welling in 2017; these architecture extends convolution to graph-structured
+data.
+
+The idea is that every node keeps an embedding, that can be updated by the embeddings of the neighbors.
+Embeddings are updated with \textbf{message passing}: information is propagated across the graph;
+information flows according to the topology, therefore each node can be influenced just by its neighbors. \\
+Each node performs \textbf{aggregation} (pooling), meaning, aggregating information from
+neighbors. The aggregated information is then passed through a neurnal network
+(e.g., a simple MLP) to obtain the updated embedding of the node.
+
+Let $n = |V|$ be the number of nodes, and $d$ be the number of features, the GCN layer input is:
+\begin{itemize}
+ \item \textbf{Node features matrix}: $X \in \mathcal{R}^{n \times d}$:
+ each row corresponds to the feature vector of a node.
+ \item \textbf{Nodes adjacency}: a square matrix $A \in \mathcal{R}^{n \times n}$, named adjacency matrix,
+ that encodes graph structure and is usually preserved across layers. $A$ stores a non-zero number
+ at the intersection of row $i$ and col $j$ of $V_i$ and $V_j$ are connected, zero if unconnected.
+ Can be binary (if the graph is unweighted) or weighted (in this case the weight of the edge is stored).
+ The matrix is symmetric if the graph is undirected. Note that other methods to store nodes adjacency exist,
+ such as adjacency lists.
+\end{itemize}
+ 
+Adjacency Matrix is a key component GNNs. Acts as a structural \textbf{prior} about the domain.
+Injects \textbf{prior knowledge} informing the model about physics, joint constraints, etc.
+Reduces overfitting by enforcing locality and limiting message passing to meaningful connections;
+it also injects inductive bias into the model.
+
+The adjacency matrix can be built with different techniques depending on the usecase:
+domain knowledge or euristics (like thresholding or kNN).
+
+Matrix multiplication can be used to implement message passing.
+Given $H = A \cdot X$, each row of the $A$ matrix acts a selector, and, when multiplied to the feature matrix $A$,
+only the active elements active (weighted, if $A$ is non-binary) will give a contribution to $H$. The resulting
+row, let's say $H_i$, contains the new feature vector of the $i$-th node, obtained as a sum of the feature
+vectors of its neighbors.
+
+Actually, the real formula is slightly more complex.\\
+First of all, we want to make sure the contribution of the previous embedding of a node is not lost;
+therefore, we enforce self-loops in the adjacency matrix: $\hat{A} = A + I$. \\
+Let $H^{(l)}$ bet the feature matrix of layer $l$. \\
+We want a formula that:
+\begin{enumerate}
+  \item propagates the embeddings from the previous layer $H^{(l-1)}$ and aggregates them
+  \item applies a projection (the simple NN we discussed above) with learnable weights $W^{(l)}$
+  \item applies the activation function $\sigma$ (we actually can use the activation function we like the most)
+\end{enumerate}
+
+The final formula is:
+$$
+H^{(l)} = \sigma \left( \hat{D}^{-\frac{1}{2}} \hat{A} \hat{D}^{-\frac{1}{2}} H^{(l-1)} W^{(l)} \right)
+$$
+
+Given the diagonal degree matrix $\hat{D} \ | \ \hat{D}_{i,i} = \sum_j \hat{A}_{i,j}$.
+The square root of its multiplicative inverse $\hat{D}^{-\frac{1}{2}}$, is applied on the left and on
+the right of the adjacency matrix, to get the symmatric normalization of $\hat{A}$.
+
+Recap: a GCN layer performs aggregation over \textbf{first-order neighbors} (nodes directly connected),
+if we want to capture correlations with higher-order neighbors we have to stack multiple layers.
+
+Extra: see theoretical motivation which relies on \textbf{spectral graph convolutions}.
+
+Usages:
+\begin{itemize}
+ \item \textbf{link prediction}: given the connections of the current month,
+ which users will be connected the most the next month?
+ \item \textbf{community detection}: for communities clustering and segmentation
+ \item \textbf{anomaly detection}: why is a node connected to the network when i didn't expect it to be?
+ \item etc.
+\end{itemize}
+
+\subsubsection{Settings and Tasks}
+Node classification scenarios:
+\begin{itemize}
+ \item \textbf{trasductive setting}: we have one graph with both labeled and unlabeled nodes, we want to
+ infer missing labels from the ones we have, on the same graph
+ \item \textbf{inductive settings}: we have many graphs in the training phase with all nodes labeled,
+ we want to label all the nodes of a new, unseen, graph
+\end{itemize}
+
+In \textbf{inductive node classification} we want to predict the class, among $C$ classes, of each node
+$v \in V$ starting from its input feature vector $x_v$.
+Through multiple GNN layers the network turns it into a node embedding $h_v \in \mathbb{R}^d$,
+then a classification layer maps the embedding to class scores $z_v = W h_v + b \in \mathbb{R}^C$.
+The predicted label corresponds to the class with the highest probability: $\hat{y}_v = \arg \max_c z_v[c]$.
+
+Other tasks:
+\begin{enumerate}
+  \item \textbf{link prediction}: predict whether an edge exists between two nodes, a.k.a, given $u, v \in V$
+  predict if $(u, v) \in E$.
+  \item \textbf{graph classification}: predict a label to classify an entire graph.
+\end{enumerate}
+
+When dealing with \textbf{link prediction}, we face a new problem: up until now we have not mentioned any method to
+obtain a representation of a link. A common pipeline for this task is: learn embeddings $h_u$ and $h_v$
+with a GNN, then compute the link representation $s_{uv} = \text{Decoder}(h_u, h_v)$, lastly map it to
+class scores and choose the class with max probability.
+
+Similarly, in \textbf{graph classification}, we face the problem of classifying an entire graph (each graph
+is a single datapoint).\\
+Problem: we want to aggregate information from all nodes and get just one class as output. \\
+Easy solution: averaging is as always the easiest method to aggregate embeddings in one supermode. \\
+More generally, we apply a \textbf{global pooling} function to the embeddings of all vertices:
+$h_{\text{graph}} = \text{Pooling}(\{ h_v \ | \ v \in V \})$.
+Then, classify the resulting embedding: $\hat{y}_G = \text{MLP}(h_\text{graph})$.\\
+Different pooling functions exist, such as \textbf{global average pooling}, that consists in computing the
+mean over the nodes' embeddings, and \textbf{attention-based pooling}, which sums the embeddings according
+to the attention scores.
+
+Other methods such as \textbf{hierarchical pooling} exist: instead of pooling all nodes in one step,
+nodes clusters are created in the graph, then a pooling function is applied to each \textbf{cluster}; the process
+is repeated several times until a single embedding is obtained. 
+
+Limitations of GCNs are:
+\begin{itemize}
+  \item \textbf{Over-smoothing}: nodes representation becomes indistinguishable as the number of layers
+  increases.
+  \item \textbf{Aggregation}: all neighbors contribute equally to the aggregation function of a node.
+  \item \textbf{Limited expressivity}: heavy dependence on the graph structure, injected through the adjacency matrix.
+\end{itemize}
+
+\subsection{Graph Attentions Networks}
+\textbf{Graph Attention Networks} (\textbf{GATs}) have been introduced to overcome the limitations of GCNs.
+In this network the importance of each link (its weight) is learned by the network itself, starting from
+a binary adjacency matrix (actually, in its most general formulation, every node can attend every other node,
+dropping any structural prior): this implies an \textbf{anisotropic} message propagation.
+
+\begin{enumerate}
+  \item Apply a \textbf{shared linear transformation} to all node features:
+  $$h_i^{(W)} = W h_i$$
+  Where $W \in \mathbb{R}^{F' \times F}$ is a learnable weights matrix.
+  \item Compute unormalized affinity score (\textbf{attention}) between each pair of neighbor nodes $i$, $j$: 
+  $$e_{ij} = \text{LeakyReLU}(a^\top \left[ h_i \| h_j \right])$$
+  Were $\cdot \| \cdot$ is vector concatenation
+  and $a \in \mathcal{R}^{2F'}$ is the learnable attention vector. If we compute affinity for every pair of
+  nodes we talk about the general model formulation, in which any structural prior is discarded; otherwise,
+  the graph structure is taken into consideration, we talk about \textbf{masked attention} (in this framework
+  adjacency matrix can be used to turn off a link, basically enforcing a zero weighted link). In this latter
+  case, $e_{ij}$ is computed only for the first order neighbors of $i$, plus $i$ itself,
+  $\mathcal{N} \cup \{i\}$, according to the adjacency matrix.
+  \item Compute \textbf{normalized attention scores} over neighbors of $i$.
+  The normalized attention scores $\alpha_{ij}$ are computed by applying the softmax function to
+  $e_{ij}$ across all neighbors $j$ of node $i$:
+  $$\alpha_{ij} = \text{softmax}_j(e_{ij}) = \frac{\exp(e_{ij})}{\sum_{k \in \mathcal{N}(i)} \exp(e_{ik})}$$
+  \item Compute final embedding $h_i'$ as a sum of $h_i^{(W)}$ values against normalized attention coefficients:
+  $$h_i' = \sigma \left( \sum_{k \in \mathcal{N}(i)} \alpha_{ij} h_j^{(W)} \right)$$
+\end{enumerate}
+
+\textbf{Residual connections} can be used in graphs as well. How?
+
+GATv2 is a follow-up paper that fixes GAT limitations. Indeed, applying $a^\top$ right after the linear projector $W$,
+makes the two operations collapse to a single linear layer. GATv2 changes the order of operations:
+$$e_{ij} = a^\top \text{LeakyReLU}(W \left[ h_i \| h_j \right])$$
+
+Extra: see Google's GraphCast, a SOTA GNN network for medium-range weather predictions.
