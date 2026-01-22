@@ -146,9 +146,9 @@ In the \textbf{self-attention} mechanism, a specific variant of the more general
 the values $V$ are derived from the same input $X$ through linear projections. Let $d_{\text{tokens}}$ be the number of tokens,
 $d_{\text{model}}$ be the hidden dimension of the model, and $d_{k}$ be the hidden dimension of a single attention head:
 \begin{align*}
-&X \in \mathcal{R}^{d_{\text{tokens}} \times d_{\text{model}}} \qquad W_Q, W_K, W_V \in \mathcal{R}^{d_{\text{model}} \times d_{k}} \\ \\
+&X \in \mathbb{R}^{d_{\text{tokens}} \times d_{\text{model}}} \qquad W_Q, W_K, W_V \in \mathbb{R}^{d_{\text{model}} \times d_{k}} \\ \\
 &\mathbf{Q = X \cdot W_Q \qquad K = X \cdot W_K \qquad V = X \cdot W_V} \\ \\
-&\rightarrow \quad Q, K, V \in \mathcal{R}^{d_{\text{model}} \times d_{k}}
+&\rightarrow \quad Q, K, V \in \mathbb{R}^{d_{\text{model}} \times d_{k}}
 \end{align*}
 
 Extra: see Cross Attention
@@ -213,9 +213,11 @@ $$
   \end{cases}
 $$
 
+\obsbox{
 $\tau$ is an hyperparameter, and, depending on its value, we can decide to penalize more over- or under- estimation:
 \begin{itemize}
   \item if $\tau = 0.5$ the formula collapses to the MAE
   \item if $\tau > 0.5$ we encourage \textit{overestimation}, since the coefficient $(1 - \tau)$, associated to the branch $y_i < \hat{y_i}$, gets smaller than $0.5$
   \item if $\tau < 0.5$ we encourage \textit{underestimation}, since the loss associated to the branch $y_i \geq \hat{y_i}$, is penalized less than the other branch
 \end{itemize}
+}
