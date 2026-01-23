@@ -1,0 +1,171 @@
+\section{Autoencoders}
+\subsection{Intro}
+Remember: supervised vs unsupervised learning.\\
+In unsupervised learning features according to which the model group inputs are found autonomously,
+no supervision signal is given to the model.
+
+Most of the larning techniques give their best in supervised learning setting.
+
+Then, why unsupervised? \\
+First of all, \textbf{practical reasons}: annotating, for instance, all YouTube videos would be impractical. \\
+Secondly, frequent structures and \textbf{hidden patterns} are already \textbf{present on the dataset},
+regardless of supervision signal;
+E.g., traits of faces can be inferred by the network after seeing millions or billions of them. \\
+Last reason is that unsupervised pre-training offers a \textbf{initialization} matrix that is not random,
+helping the network to learn better and faster the task. Intuitively, it basically consists in giving
+the model a vague idea of the field it is going to work in. With respect to random initialization,
+unsupervised pre-training offers a better starting (initialization) point, less subject to the variance
+intrinsic to random initialization. Plus, unsupervised learning is a good \textbf{regularizer} for supervised
+learning.
+
+Take, for instance, the MNIST dataset; all admissible input configurations are, given that the dataset
+contains BW (we consider each pixel a binary value) $28 \times 28 = 784 \text{px}$ images,
+we get $2^{784} = 1.02 \cdot 10^{236}$ dispositions\dots
+However, there exist a subspace that contains all digits, much smaller than the set of valid inputs.
+
+\defbox{
+  \textbf{Manifold assumption}: data lies on a manifold much lower in dimensionality than
+  the input space. Therefore we can reduce the degrees of freedom we have to account for.
+}
+
+Given the lower dimensionality of the manifold, it can be convenient for the model
+to learn a data representation that lives on the manifold, instead of a representation
+that lives in the bigger and more general $\mathcal{R}^N$ space.
+
+\defbox{
+\textbf{Dimensionality Reduction}: a classical unsupervised learning taks consists in finding a good
+data \textbf{representation}, that \textbf{preserves} as much information of the original data as possible,
+respecting the imposed \textbf{constraints}. The new representation must be simpler or with lower dimensionality.
+}
+
+Lower dimensional representations are basically \textbf{compressions} of original data into a smaller representation.
+
+Remember: Principal Component Analysis (PCA) allows us to find a lower dimensional representation of data;
+it can be viewed as an unsupervised learning algorithm that learns that representation.
+PCA is linear since it consists in a rototraslation matrix, a.k.a a linear transformation of the data.
+This algorithm works well as long as the data lies on a linear manifold; we need a \textbf{more powerful}
+way of doing the same thing.
+
+A representation is \textbf{task specific} if, for instance, the model learns to compress just the ones from the
+MNIST dataset; it follows that the final model can be used just with ones.
+If it can be applied for every digit, then the representation is taks agnostic.
+
+Tip: try to implement PCA from scratch
+
+\subsection{Autoencoders}
+Idea: train a NN with a \textbf{bottleneck} hidden layer and try to make the output match the input.
+% TODO diagram
+
+\defbox{
+An \textbf{autoencoder} (AE) is a feedforward (a.k.a. goes from the input to the output) neural network trained to
+copy the input to the output, passing through a compressed version of the input.
+The network is made up of two parts: the left hand side (LHS) of the architecture is called \textbf{encoder} $h = f(x)$
+(compressor), the RHS is called \textbf{decoder} $y = g(h)$ (decompressor); the hidden layer in the middle stores
+a compressed data representation called \textbf{code} $h$.
+The code is a projection of the input to a \textbf{nonlinear manifold} (nonlinear given that nonlinear layers are applied
+before and after the code).
+}
+
+% TODO: diagram
+
+Why cannot just train that architecture with SGD and backprop and end the explanation here? \\
+\textbf{Problem}: as always, if overparametrized, the network can overfit data. If $f$ and $g$ are given too much
+capacity, they could learn the identity transformation, avoiding the data compression at all. \\
+\textbf{Solution}: as always, we need some form of regularization.
+
+\subsection{Undercomplete Autoencoder}
+In undercomplete autoencoder the hidden layer $h$ has a \textbf{smaller dimension} than $x$,
+forcing the architecture to compress data.
+
+During training, we aims at minimizing $\mathcal{L}(x, g(f(x)))$, meaning, some loss function defined
+between the input and the output of the function composition $\text{encoder}(\text{decoder}(\cdot))$.
+The loss function is, for instance, the MSE, and generally \textbf{penalizes} output for being
+\textbf{dissimilar} to the input.
+
+\textbf{Problem}: encoder and decoder can memorize information indexing it in the hidden layer;
+this overfitting behavior happens if the model is overparametrized (if they have enough capacity).
+However, if too much params are removed the network will underfit, making the compression too lossy.
+
+\textbf{Solution}: the next sections introduce \textbf{regularized AEs} that mitigate this problem by
+enforcing the model to learn only useful properties of the data, prioritizing the most important ones.
+
+\subsection{Sparse Autoencoder}
+\defbox{
+  A \textbf{Sparse Autoencoder} (abbreviated with SAE) is an autoencoder whose loss' regularization 
+  term is a \textbf{sparsity penality} of the code $h$. The sparsity penality term enforces the hidden
+  layer to use as few pages as possible in the \textbf{dictionary}* .
+}
+
+The full loss function looks like:
+$$
+\mathcal{L}_\textbf{SAE} = D(x, g(f(x))) + \lambda \| h \|
+$$
+
+In this case the regularization term enforces sparsity in hidden layers \textbf{activations},
+contrary to the MLP case in which the regularization uses the L1 norm of the weights.
+
+Thanks to this new regularization factor, we can use a hidden layer bigger than the input
+(\textit{an over-complete representation of the input}) without overfitting.
+
+* Sparse autoencoders can discover representations that take into consideration most (or all) information
+of a signal, relying on a \textbf{combination} of small \textbf{elementary concepts}, even if partially related.
+These elementary concepts are extracted during training and stored into the \textbf{learned dictionary}.
+When an input is fed into the model, the elementary concepts that are contained by the input are identified in
+the dictionary, and copied into the output.
+
+The hidden layer has the dimensionality of the dictionary, which is much higher than the input, hence the name
+\textbf{overcomplete autoencoder}.
+
+SAE are typically used to learn features for another task.
+Autoencoders (specifically the encoder portion) can be used to cluster objects. The resulting code can be
+exploited as the cluster name. Objects that share the same properties will share the same code.
+
+\subsection{Denoising Autoencoder}
+\defbox{
+  A \textbf{Denoiser Autoencoder} (DAE) is an autoencoder trained with the purpose of cleaning up input data from noise.
+  Indeed, during training, a the model is encouraged to learn \textbf{robust} features by being asked to reconstruct 
+  the input $x$ starting from a corrupted version itself $\hat{x}$. 
+}
+
+The loss is function has this form:
+$$
+\hat{x} \sim x + \mathcal{N}(0, I) \sigma \qquad \mathcal{L}_\text{DAE} = D(x, f(g(\hat{x})))
+$$
+
+The loss has't the sparsity penality so the code is dense; the model is undercomplete (hourglass shaped) as a form of
+regularization.
+
+Conceptually, the DAE is able to push the corrupted point $\hat{x}$ to the original location of the point $x$ on the
+manifold (are we learning a vector field?).
+
+Real life application: denoising autoencoders used for \textbf{anomaly detection}.
+The model is trained with data associated with normal (good) samples, learning their distribution.
+Then, when fed to an anomalous sample, the model will project it to its normal counterpart,
+amplyfing the error (\textbf{reconstruction error}) from the original one.
+By measuring reconstruction erorr, e.g. with euclidean distance, and thresholding its value,
+we obtain a tunable anomaly detector.
+
+\subsection{Contractive Autoencoder}
+\defbox{
+A \textbf{Contractive Autoencoder} (CAE) is an autoencoder trained to make the code insensitive to slight
+variations of the input.
+}
+
+The loss function is:
+$$
+\mathcal{L}_\text{CAE} = D(x, g(f(x))) + \lambda \| \frac{\partial{f(x)}}{\partial{x}} \|^2
+$$
+
+Note that $f(x)$ is the output of the encoder, which corresponds to the code $h$.
+As always we add a regularization term that depends on the code.
+
+The regularization term encourages the gradient of the hidden layer with respect to the input $x$ to be small.
+This means a more stable code, that does not change much when $x$ is affected by small perturbations.
+
+It is called contractive since the CAE wraps space such that the a neighborhood input points is mapped to a smaller
+neighborhood of output points, bringing ``back'' (i.e.\ to the original version) the corrupted input.
+This loss makes the AE robust to noise, since it ``ignores'' directions that are irrelevant to the compression task.
+
+As a result, the structure of the manifold is learned, along with the directions of the variations that are not relevant
+to the task (variation for which the encoder doesn't to be sensitive), and implicilty the direction of the variations
+that are important to the taks (hence observed on the dataset).
