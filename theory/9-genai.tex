@@ -1,6 +1,6 @@
 \section{Generative Models}
 \subsection{Background}
-In this section the concept of \textbf{marginal distribution} is often referenced.
+In this section, the concept of a \textbf{marginal distribution} is often referenced.
 
 \defbox{
   A \textbf{marginal distribution} is the distribution we obtain aggregating (by summing or integrating)
@@ -8,7 +8,7 @@ In this section the concept of \textbf{marginal distribution} is often reference
   distribution will no longer be parametrized over the aggregated variables (``ignoring'' them).
 }
 
-Intuitively, it consists in flattening a highly dimensional space into a lower dimensional one,
+Intuitively, it consists in flattening a high-dimensional space into a lower dimensional one,
 reducing the degrees of freedom of the probability function.
 
 The resulting distribution is called ``marginal'' because in the days of paper tables, mathematicians
@@ -41,10 +41,12 @@ Stands for \textbf{Variational Autoencoder} (VAE).
 Denoising and contractive autoencoders can implicitly learn the probability distribution $P(x)$,
 however, it is very difficult to sample new examples from these models.
 
-The simplest generative model is a model that learns $\mathcal{N}(X | \mu_\text{cat}, \ \Sigma_\text{cat})$
+Given the task of cat images generation,
+the simplest generative model is a model that learns $\mathcal{N}(X \ | \ \mu_\text{cat}, \Sigma_\text{cat})$
 for each pixel, and samples from it.
 This is an overly simple distribution, plus we are assuming pixels independence.
-This generative model operates over the pixel space, which is not optimal: we could keep the simple distribution
+This generative model operates over the pixel space (the same space of the observation in which the observation lives),
+which is not optimal: we could keep the simple distribution
 assumption and change just the space on which we operate.
 
 \defbox{
@@ -84,7 +86,7 @@ Sampling procedure:
 Sampling from the prior distribution $P(z)$ is inefficient: the portion of the distribution from which we sample,
 has a huge impact on the final result.
 We want to sample from points that are significant for the observation $x$; however, most of the sampled $z$s are
-irrelevant to $x$. To get a good estimate of $P(x)$ we need a large number of samples.
+irrelevant to $x$. To get a good estimate of $P(x)$ we would need a large number of samples (inefficiency).
 
 Idea: learn a model that, given an observation $x$, predicts the most plausible latent variables $z$. Meaning,
 those latent variables that are more related to $x$ under the posterior distribution $P(z|x)$.
@@ -102,98 +104,112 @@ $$
 Q*(z|x) = \arg \min_Q D_\text{KL} \left[ Q(z|x) \| P(z|x) \right]
 $$
 
-** $D_{KL}$ is Kullback-Leibler divergence. The analogous of euclidean distance but for distributions:
+** $D_\text{KL}$ is Kullback-Leibler divergence. The analogous of euclidean distance but for distributions:
 \begin{align*}
-D_{KL}(Q(z|x) \| P(z|x))& \\
-& = \mathbb{E}_{x \sim Q(z|x)} \left[ \log \frac{Q(z|x)}{P(z|x)} \right] \\
-&= \mathbb{E}_{x \sim Q(z|x)} \left[ \log Q(z|x) - \log P(z|x) \right]
+D_\text{KL} \left[ Q(z|x) \| P(z|x) \right]
+&= \mathbb{E}_{z \sim Q(z|x)} \left[ \log \frac{Q(z|x)}{P(z|x)} \right] \tag{KL divergence formula} \\
+&= \mathbb{E}_{z \sim Q(z|x)} \left[ \log Q(z|x) - \log P(z|x) \right] \tag{From log identities} \\
+&= \dots
 \end{align*}
 
-Under the hood, the KL divergence is just the expected value (expectation taken using probability $P$) of the logarithmic
-difference between probabilities $Q$ and $P$.
+Under the hood, the KL divergence is just the expected value (expectation taken using probability $Q(z|x)$) of the logarithmic
+difference between probabilities $Q(z|x)$ and $P(z|x)$.
+\begin{align*}
+\dots &= \mathbb{E}_{z \sim Q(z|x)} \left[ \log Q(z|x) - \log \frac{P(x|z) P(z)}{P(x)} \right] \tag{From Bayes' rule} \\
+&= \mathbb{E}_{z \sim Q(z|x)} \left[ \log Q(z|x) - (\log P(x|z) + \log P(z) - \log {P(x)}) \right] \tag{From log identities} \\
+&= \mathbb{E}_{z \sim Q(z|x)} \left[ \log Q(z|x) - \log P(x|z) - \log P(z) + \log {P(x)} \right] \tag{Removing parenthesis} \\
+&= \mathbb{E}_{z \sim Q(z|x)} \left[ \log Q(z|x) - \log P(x|z) - \log P(z) \right] + \log {P(x)} \tag{P(x) independent from z} \\
+&= \mathbb{E}_{z} \left[ \log Q(z|x) - \log P(z) \right] - \mathbb{E}_{z} \left[ \log P(x|z) \right] + \log {P(x)} \tag{From expected value linearity} \\
+&= \dots
+\end{align*}
 
-% $$
-% ... = E_{z \approx q(z|x)}[log q(z|x) - log p(z|x)] = ...
-% $$
+The first addend of the right hand side (RHS) is now a KL divergence. We then move the last RHS term to the LHS, and invert the sign:
+\begin{align*}
+D_\text{KL} \left[ Q(z|x) \| P(z|x) \right] &= D_\text{KL} \left[ Q(z|x) \| P(z) \right] - \mathbb{E}_{z \sim Q(z|x)} \left[ \log P(x|z) \right] + \log {P(x)} \\
+D_\text{KL} \left[ Q(z|x) \| P(z|x) \right] - \log {P(x)} &= D_\text{KL} \left[ Q(z|x) \| P(z) \right] - \mathbb{E}_{z \sim Q(z|x)} \left[ \log P(x|z) \right] \\
+\log {P(x)} -
+\underbrace{ D_\text{KL} \left[ Q(z|x) \| P(z|x) \right] }_{\substack{\text{KL divergence between proposal} \\ \text{and, real, posterior distribution}}} &=
+\underbrace{ \mathbb{E}_{z \sim Q(z|x)} \left[ \log P(x|z) \right] - D_\text{KL} \left[ Q(z|x) \| P(z) \right] }_{=\text{ELBO}}
+\end{align*}
 
-% From Bayes:
-% $$
-% p(z|x) = p(x \cup z) / p(x)
-% p(x|z) = p(x \cup z) / p(z)
-% substituting
-% p(z|x) = ( p(x|z) p(z) ) / p(x)
-% $$
+The RHS is the loss function of the VAE (next steps explain why and how), and is called \textbf{ELBO} (Evidence Lower BOund).
+Remember that our objective is to learn a proposal distribution that approximates well the posterior distribution.
 
-% Putting it into the previous formula:
-% $$
-% ... = E_{z \approx q(z|x)} [log q(z|x) - log [( p(x|z) p(z) ) / p(x)]]
-% = E_{z \approx q(z|x)} [log q(z|x) - [ log p(x|z) + log p(z) - log p(x)] ] // Log properties
-% = E_{z \approx q(z|x)} [log q(z|x) - log p(x|z) - log p(z) + log p(x) ]  // Consuming the minus
-% = E_{z \approx q(z|x)} [log q(z|x) - log p(x|z) - log p(z)] + E_{z \approx q(z|x)} log p(x)  // Exploiting expected value linearity
-% = E_{z \approx q(z|x)} [log q(z|x) - log p(x|z) - log p(z)] + log p(x)  // But p(x) is indepndent from z
-% = E_{z \approx q(z|x)} [log q(z|x) - log p(z)] - E_{z \approx p(x|z)} [log p(x|z)] + log p(x)  // Rearranging and braking terms inside E
-% $$
+Analyzing the terms:
+\begin{itemize}
+  \item $\log {P(x)}$ is fixed given the dataset. Learning $P(x)$ is our final goal, but we want to do that according to the latent variable model
+  (impractical in its base formulation, we stick to the variational inference framework). So\dots we don't care about this term during learning.
+  \item $D_\text{KL}$ is intrinsically non-negative since it is a distance measure.
+  \begin{itemize}
+    \item $D_\text{KL} \left[ Q(z|x) \| P(z|x) \right] \geq 0$
+    \item $D_\text{KL} \left[ Q(z|x) \| P(z) \right] \geq 0$
+  \end{itemize}
+\end{itemize}
 
-% The first addend is now KL divergence. The final formula is:
-% $$
-% ... = KL (log q(z|x) || log p(z)) - E_{z \approx p(x|z)} [log p(x|z)] + log p(x)
-% $$
+Results in:
+\begin{align*}
+&\log {P(x)} - D_\text{KL} \left[ Q(z|x) \| P(z|x) \right] = \text{ELBO} \\
+&\log {P(x)} =
+\underbrace{D_\text{KL} \left[ Q(z|x) \| P(z|x) \right]}_{\geq 0} + \text{ELBO} \\
+& \Rightarrow \log {P(x)} \geq \text{ELBO} \tag{Since $D_\text{KL}$ adds something positive to the ELBO}
+\end{align*}
 
-% $$
-% D_{KL}[q(z|x) || p(z|x)] = KL (log q(z|x) || log p(z)) - E_{z \approx p(x|z)} [log p(x|z)] + log p(x)
-% D_{KL}[q(z|x) || p(z|x)] - log p(x) = KL (log q(z|x) || log p(z)) - E_{z \approx p(x|z)} [log p(x|z)]
-% log p(x) - D_{KL}[q(z|x) || p(z|x)] = E_{z \approx p(x|z)} [log p(x|z)] - KL (log q(z|x) || log p(z))
-% $$
+From the last implication, we can understand why the ELBO is a lower bound.
+Therefore, by maximizing the ELBO, we are minimizing the $D_\text{KL}$ term, given that the true log-likelihood $\log {P(x)}$ is fixed.
+The name \textit{variational} autoencoders comes from this: we are minimizing the variation between the two distributions.
 
-% The second term is the loss function of the variational autoenc and is called ELBO.
-
-% Analyzing the terms:
-%  - log p(x) is fixed gieven the dataset
-%  - D_{KL} is intriniscally positive since it is a distance
-
-% Therefore, by maximizing the ELBO we are minimizing the D_{KL} term. The name VARIATIONAL autoencoders comes from this step.
-% We are therefore minimizing the variation from the two distributions.
-
-% The variational atuoencoeder VAE is an eutoencoder trained to maximize the Evidence Lower Bound ELBO.
-% Differently from the standard AE, the variational one does not output a deterministic vector, but the params of a latent distribution.
+\defbox{
+  A \textbf{variational atuoencoeder} (VAE) is an autoencoder trained to maximize the \textbf{ELBO} (which becomes its loss function).
+  Differently from the standard AE, the \textbf{encoder} $Q_\phi(z|x)$ of a VAE does not output a deterministic
+  vector, but the params of the true posterior distribution $P(z|x)$.
+  Complementary, the \textbf{decoder} $P_\theta(x|z)$ reconstructs the input $x$ from the sampled variable $z$.
+}
 
 % TODO diagram
 
 % x -> Encoder -> q_{\phi}(z|x) -> Decoder -> \hat x
 
-% The output is dependend on the distribution on the latent layer.
+The loss function is the hence:
+$$
+\underbrace{\mathbb{E}_{z \sim Q(z|x)} \left[ \log P_\theta(x|z) \right]}_\text{Regularization term} -
+\underbrace{D_\text{KL} \left[ Q_\phi(z|x) \| P(z) \right]}_\text{Reconstruction term}
+$$
 
-% Therefore: $E_{z \approx p(x|z)} [log p(x|z)] - KL (log q(z|x) || log p(z))$ can be viewed as two addends the minimiaztion term plus the regularization term.
-% p(z) is the prior distribution, we have to choose it. We usually use a normal distribution zero centered and with a parametric variance: $p(z) -> \N (z | \mu = 0, \sum = I)$.
-% Therefore the posterior distribution is alike a normal distribution with mean and variance returned by the VAE.
+$P(z)$, which is the prior distribution, can be chosen by the network architect;
+it is usually the normal distribution with zero mean and with a parametric variance:
+$P(z) \rightarrow \mathcal{N} (z \ | \ \mu = 0, \sigma = I)$.
+Therefore, the posterior distribution is alike a normal distribution with mean and variance learned during training.
 
-% In practical terms the VAE returns two vectors, representing the mean and the variance.
-% x -> f(x; \theta) = [\mu(x), \sigma^2(x)].
+In practical terms, the encoder network (which approximates $Q(z|x)$),
+returns two vectors, representing the mean and the variance of a pseudo-normal distribution, given the input $x$:
+$$ x \rightarrow \text{enc}(x; \phi) = [\mu(x), \sigma^2(x)] \quad \text{s.t.} \quad \mathcal{N} (z \ | \ \mu(x), \sigma(x)^2)$$
 
-% Note that the regularization term acts on the middle of the encoder, while the minimization term on the output.
-% We enforce a latent space distribution similar to the gaussian one, without collapsing it to a gaussian, otherwise the process
-% wouldn't be invertible.
+The decoder network (which approximates $P(x|z)$) is fed with $z$ and returns $\tilde{x}$:
+$$ \text{dec}(z; \theta) \rightarrow \tilde{x} \quad \text{where} \quad z \sim \mathcal{N} (z \ | \ \mu(x), \sigma(x)^2) $$
 
-% How to generate new examples?
-% Option one, sampling from the posterior distribution.
-% However, if training went well, the posterior Q(z|X) is very similar to the prior. We can sample from the prior.
+To maximize $\log P(x|z)$ we can minimize the MSE between $x$ and $\tilde{x}$.
 
-% The process to generate new images is getting a sample from the prior (a normal distribution), feeding it to the decoder, and getting its output.
+Note that the regularization term acts in the middle of the encoder, while the reconstruction term on the output.
+We enforce a latent space to follow a standard Gaussian distribution.
+If both posterior and prior distributions have Gaussian form, like in this case, the KL divergence as a closed-form equation.
 
-% How to make inferece (for instance to perform anomaly detection)?
-% From theory:
-% $$
-% log p(x) - D_{KL}[ q(z|x) || p(z|x) ] = TODO RHS
-% $$
+How to generate new examples (a.k.a. perform inference)? \\
+Option one, sampling from the posterior distribution $Q(z|x)$.\\
+However, if training went well, the posterior $Q(z|X)$ is very similar to the prior $P(z)$. We can directly sample from the prior.
 
-% Given that the GL divergence is low, we can say that log p(x) is approsimately the RHS term.
+The process needed to generate new data (e.g., new images) is getting a sample from the prior
+(a standard normal distribution), feeding it to the decoder, and getting its output.
 
-% Enc -> $\mu, \sigma^2$ -> $z \approx N(\mu, \sigma^2)$ -> Dec
-% The sampling step is not differentiable, so the previous pipeline is not end to end differentiable.
-% We want something that is backpropagation safe: we use the reparametrization trick.
-% The idea is to substitute sampling with: $\epsilon \approx N(0, 1), z = \mu + \sigma^2 \epsilon$; sample noise from normal
-% zero mean and shift mu according to a fraction of the sigma squared dependent on the epsilon.
-% The sampling is an external procedure.
+Problem: \textbf{sampling} from a distribution is \textbf{not a differentiable operation},
+so the previous pipeline is not end-to-end differentiable.
+
+We use the re-parametrization trick to make the process backpropagation-safe:
+$$
+z \sim \mathcal{N} (z \ | \ \mu(x), \sigma(x)^2) \quad \text{becomes} \quad \epsilon \sim \mathcal{N}(0, I), \ Z = \mu + \sigma^2 \epsilon
+$$
+
+With this formulation, we still sample from a normal distribution, but the process is out of the gradient's path, making the
+operation differentiable. $\epsilon$ is now just a sort of noise external to the gradient flow, allowing backpropagation.
 
 % \subsection{GANs}
 % Generative Adversarial Netowrks
