@@ -159,7 +159,7 @@ Therefore, by maximizing the ELBO, we are minimizing the $D_\text{KL}$ term, giv
 The name \textit{variational} autoencoders comes from this: we are minimizing the variation between the two distributions.
 
 \defbox{
-  A \textbf{variational atuoencoeder} (VAE) is an autoencoder trained to maximize the \textbf{ELBO} (which becomes its loss function).
+  A \textbf{variational autoencoder} (VAE) is an autoencoder trained to maximize the \textbf{ELBO} (which becomes its loss function).
   Differently from the standard AE, the \textbf{encoder} $Q_\phi(z|x)$ of a VAE does not output a deterministic
   vector, but the params of the true posterior distribution $P(z|x)$.
   Complementary, the \textbf{decoder} $P_\theta(x|z)$ reconstructs the input $x$ from the sampled variable $z$.
