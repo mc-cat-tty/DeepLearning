@@ -101,7 +101,7 @@ Instead of sampling $z$ from $P(z)$ (step 1), we sample from $Q(z|x)$.
 Clearly, we want $Q(z|x)$ to be as close as possible to the true posterior $P(z|x)$; in other words, we want
 their \textbf{divergence}** to be \textbf{as low as possible}:
 $$
-Q*(z|x) = \arg \min_Q D_\text{KL} \left[ Q(z|x) \| P(z|x) \right]
+Q^*(z|x) = \arg \min_Q D_\text{KL} \left[ Q(z|x) \| P(z|x) \right]
 $$
 
 ** $D_\text{KL}$ is Kullback-Leibler divergence. The analogous of euclidean distance but for distributions:
@@ -263,7 +263,7 @@ $$
 If the discriminator is too good at discriminating ($D_{\theta_d}(G_{\theta_g}(z))$ close to 0, which means
 $1 - D_{\theta_d}(G_{\theta_g}(z))$ close to 1) and the generator is
 not generating realistic images yet, the gradient received by the generator becomes almost zero (indeed $\log(1 - D_{\theta_d}(G_{\theta_g}(z)))$
-is close to 1), and it will not improve its quality, leading to \textbf{vanishing gradient}.
+is close to 0), and it will not improve its quality, leading to \textbf{vanishing gradient}.
 
 As a solution, we can maximize $\log(D_{\theta_d}(G_{\theta_g}(z)))$ instead of minimizing $\log(1 - D_{\theta_d}(G_{\theta_g}(z)))$;
 the optimization problem is the same, but the \textbf{gradient signal is higher} during initial training phases,

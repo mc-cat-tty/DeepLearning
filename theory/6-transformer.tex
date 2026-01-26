@@ -6,21 +6,21 @@
 
 We are talking about models that operate on timeseries. Timeseries are sequential (hence ordered) numerical values.
 Each timestep has a value, or token, associated to it.
-Remember that sequential models always work with numbers (scalars, vectors, matricies, and tensors), for e.g., words are converted into embeddings.
+Remember that sequential models always work with numbers (scalars, vectors, matrices, and tensors), for e.g., words are converted into embeddings.
 We have seen RNN, but other architectures able to outperform RNN exist.
 
-Can we apply convolution on sequential models? yes, with a 1D (\textbf{Conv1D}) kernel. 
+Can we apply convolution on sequential models? Yes, with a 1D (\textbf{Conv1D}) kernel. 
 
 Convolution can be applied to time series, if we represent each token with a vector of fixed length.
 The kernel will be the number of features encoded by the vector by kernel length (i.e., the number of
 timepoints the kernel takes into consideration).
 
 Let $\omega$ be a convolutive kernel, let $k$ be its the size, let $f(t)$ be the value of the timeseries
-at time $t$, the discrete 1D convolution is defined by:
+at time $t$, the discrete (causal) 1D convolution is defined by:
 $\omega * f(x) = \sum_{i=0}^{k-1} \omega(i) f(x-i)$.
 
 \obsbox{
-Convolution is moving backward in time, not forward.
+This convolution is moving backward in time, not forward.
 }
 
 Intuition: multiply features by learnable weights and sum them up. Obviously the kernel is moved only along the time axis.
@@ -136,7 +136,7 @@ final information is retrieved as a weighted sum of the values:
   \end{algorithmic}
 \end{algorithm}
 
-Clearly, we can rid of the for loop and the summation working with $K$ and $V$ in matrix form.
+Clearly, we can get rid of the for loop and the summation working with $K$ and $V$ in matrix form.
 
 During the training, we need to learn how to weigh the input tokens.
 The weight matrix (actually, matrices) is the only learnable parameter of the layer.

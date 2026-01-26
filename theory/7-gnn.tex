@@ -95,7 +95,7 @@ $$
 
 Given the diagonal degree matrix $\hat{D} \ | \ \hat{D}_{i,i} = \sum_j \hat{A}_{i,j}$.
 The square root of its multiplicative inverse $\hat{D}^{-\frac{1}{2}}$, is applied on the left and on
-the right of the adjacency matrix, to get the symmatric normalization of $\hat{A}$.
+the right of the adjacency matrix, to get the \textbf{symmetric normalization} of $\hat{A}$.
 
 Recap: a GCN layer performs aggregation over \textbf{first-order neighbors} (nodes directly connected),
 if we want to capture correlations with higher-order neighbors we have to stack multiple layers.
@@ -172,14 +172,14 @@ dropping any structural prior): this implies an \textbf{anisotropic} message pro
   $$h_i^{(W)} = W h_i$$
   Where $W \in \mathbb{R}^{F' \times F}$ is a learnable weights matrix.
   \item Compute unormalized affinity score (\textbf{attention}) between each pair of neighbor nodes $i$, $j$: 
-  $$e_{ij} = \text{LeakyReLU}(a^\top \left[ h_i \| h_j \right])$$
+  $$e_{ij} = \text{LeakyReLU}(a^\top \left[ h_i^{(W)} \| h_j^{(W)} \right])$$
   Were $\cdot \| \cdot$ is vector concatenation
   and $a \in \mathcal{R}^{2F'}$ is the learnable attention vector. If we compute affinity for every pair of
   nodes we talk about the general model formulation, in which any structural prior is discarded; otherwise,
   the graph structure is taken into consideration, we talk about \textbf{masked attention} (in this framework
   adjacency matrix can be used to turn off a link, basically enforcing a zero weighted link). In this latter
   case, $e_{ij}$ is computed only for the first order neighbors of $i$, plus $i$ itself,
-  $\mathcal{N} \cup \{i\}$, according to the adjacency matrix.
+  $\mathcal{N}(i) \cup \{i\}$, according to the adjacency matrix.
   \item Compute \textbf{normalized attention scores} over neighbors of $i$.
   The normalized attention scores $\alpha_{ij}$ are computed by applying the softmax function to
   $e_{ij}$ across all neighbors $j$ of node $i$:
