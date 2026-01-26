@@ -171,8 +171,8 @@ The name \textit{variational} autoencoders comes from this: we are minimizing th
 
 The loss function is the hence:
 $$
-\underbrace{\mathbb{E}_{z \sim Q(z|x)} \left[ \log P_\theta(x|z) \right]}_\text{Regularization term} -
-\underbrace{D_\text{KL} \left[ Q_\phi(z|x) \| P(z) \right]}_\text{Reconstruction term}
+\underbrace{\mathbb{E}_{z \sim Q(z|x)} \left[ \log P_\theta(x|z) \right]}_\text{Reconstruction term} -
+\underbrace{D_\text{KL} \left[ Q_\phi(z|x) \| P(z) \right]}_\text{Regularization term}
 $$
 
 $P(z)$, which is the prior distribution, can be chosen by the network architect;
