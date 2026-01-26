@@ -57,7 +57,7 @@ Remember that in principle, we introduced CNNs to have less params than MLPs.
 Advantages:
 \begin{itemize}
  \item TCNs are also more stable than RNNs, since they don't suffer from vanishing and exploding gradient.
- \item RNN cannot be parallelized, while CNN and RNN can be (convolution can be inherently parallelized) making them faster.
+ \item RNN cannot be parallelized, while CNN and TCN can be (convolution can be inherently parallelized) making them faster.
  \item More control over memory footprint. Memory and receptive field depend on network depth.
  \item Explainability modules can be plugged
 \end{itemize}
@@ -148,7 +148,7 @@ $d_{\text{model}}$ be the hidden dimension of the model, and $d_{k}$ be the hidd
 \begin{align*}
 &X \in \mathbb{R}^{d_{\text{tokens}} \times d_{\text{model}}} \qquad W_Q, W_K, W_V \in \mathbb{R}^{d_{\text{model}} \times d_{k}} \\ \\
 &\mathbf{Q = X \cdot W_Q \qquad K = X \cdot W_K \qquad V = X \cdot W_V} \\ \\
-&\rightarrow \quad Q, K, V \in \mathbb{R}^{d_{\text{model}} \times d_{k}}
+&\rightarrow \quad Q, K, V \in \mathbb{R}^{d_{\text{tokens}} \times d_{k}}
 \end{align*}
 
 Extra: see Cross Attention

@@ -53,9 +53,9 @@ neighbors. The aggregated information is then passed through a neurnal network
 
 Let $n = |V|$ be the number of nodes, and $d$ be the number of features, the GCN layer input is:
 \begin{itemize}
- \item \textbf{Node features matrix}: $X \in \mathcal{R}^{n \times d}$:
+ \item \textbf{Node features matrix}: $X \in \mathbb{R}^{n \times d}$:
  each row corresponds to the feature vector of a node.
- \item \textbf{Nodes adjacency}: a square matrix $A \in \mathcal{R}^{n \times n}$, named adjacency matrix,
+ \item \textbf{Nodes adjacency}: a square matrix $A \in \mathbb{R}^{n \times n}$, named adjacency matrix,
  that encodes graph structure and is usually preserved across layers. $A$ stores a non-zero number
  at the intersection of row $i$ and col $j$ of $V_i$ and $V_j$ are connected, zero if unconnected.
  Can be binary (if the graph is unweighted) or weighted (in this case the weight of the edge is stored).

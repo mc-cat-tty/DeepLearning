@@ -159,7 +159,7 @@ $$
 Note that $f(x)$ is the output of the encoder, which corresponds to the code $h$.
 As always we add a regularization term that depends on the code.
 
-The regularization term encourages the gradient of the hidden layer with respect to the input $x$ to be small.
+The regularization term encourages the gradient of the encoder output with respect to the input $x$ to be small.
 This means a more stable code, that does not change much when $x$ is affected by small perturbations.
 
 It is called contractive since the CAE wraps space such that the a neighborhood input points is mapped to a smaller
